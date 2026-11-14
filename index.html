@@ -270,8 +270,10 @@
     var preco = of && of.em === ult ? of.preco : serie[ult];
     var media = ant.length ? ant.reduce(function (a, b) { return a + b; }, 0) / ant.length : null;
     var minDias = Math.max(1, Math.min(30, arq.config.dias_minimos_de_historico || 5));
-    var desc = media && ant.length >= minDias ? (media - preco) / media * 100 : null;
-    return { mes: chave.split('|')[1], preco: preco, media: media, n: ant.length, desc: desc, oferta: of, serie: serie, dias: ds, minDias: minDias };
+    var n = ant.length, base = (hist.base || {})[chave];
+    if (n < minDias && base && base.media) { media = base.media; n = minDias; }
+    var desc = media && n >= minDias ? (media - preco) / media * 100 : null;
+    return { mes: chave.split('|')[1], preco: preco, media: media, n: n, desc: desc, oferta: of, serie: serie, dias: ds, minDias: minDias };
   }
   function selo(m) {
     if (m.desc === null) return '<span class="selo">média em ' + Math.min(m.n, m.minDias) + '/' + m.minDias + ' dias</span>';

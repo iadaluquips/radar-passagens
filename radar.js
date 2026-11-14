@@ -19,7 +19,9 @@ const PADRAO = {
   dias_minimos_de_historico: 5,     // só usa a média depois de X dias coletados
   janela_media_dias: 60,            // média calculada sobre os últimos X dias
   confirmacoes_google_por_rodada: 3, // limite p/ caber nas 250 buscas grátis/mês
-  max_avisos_por_rota: 3            // no máximo X datas por rota em cada aviso
+  max_avisos_por_rota: 3,           // no máximo X datas por rota em cada aviso
+  medias_google_por_rodada: 4,      // quantos meses por rodada ganham a média pronta do Google
+  limite_google_mes: 230            // teto de buscas na SerpApi por mês (plano grátis: 250)
 };
 
 const CIAS = {
@@ -130,12 +132,23 @@ async function confirmarGoogle(of) {
   const pi = j.price_insights || {};
   const preco = pi.lowest_price || (voos.length ? Math.min(...voos) : null);
   if (!preco) return null;
+  const historico = (Array.isArray(pi.price_history) ? pi.price_history : [])
+    .filter((x) => Array.isArray(x) && x[0] > 0 && x[1] > 0)
+    .map((x) => [new Date(x[0] * 1000).toISOString().slice(0, 10), x[1]]);
   return {
     preco,
     nivel: pi.price_level || null,
-    faixa: Array.isArray(pi.typical_price_range) ? pi.typical_price_range : null,
-    url: (j.search_metadata && j.search_metadata.google_flights_url) || null
+    faixa: Array.isArray(pi.typical_price_range) && pi.typical_price_range.length === 2 ? pi.typical_price_range : null,
+    url: (j.search_metadata && j.search_metadata.google_flights_url) || null,
+    historico
   };
+}
+
+// controle do limite mensal da SerpApi
+function podeGoogle(hist, cfg, hoje) {
+  const mes = hoje.slice(0, 7);
+  if (!hist.google || hist.google.mes !== mes) hist.google = { mes, usadas: 0 };
+  return SERPAPI_KEY && hist.google.usadas < cfg.limite_google_mes;
 }
 
 const linkGoogle = (of) =>
@@ -155,6 +168,10 @@ function estatisticas(serie, hoje, janela) {
   }
   const media = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
   return { n: vals.length, media, minimo };
+}
+function comBase(est, base, minDias) {
+  if (est.n >= minDias || !base) return est;
+  return { n: minDias, media: base.media, minimo: est.minimo, fonte: 'google' };
 }
 
 function avaliar(preco, est, rota, cfg) {
@@ -236,6 +253,9 @@ async function main() {
   hist.precos = hist.precos || {};
   hist.alertas = hist.alertas || {};
   hist.ofertas = hist.ofertas || {};
+  hist.base = hist.base || {};
+  hist.semeado = hist.semeado || {};
+  hist.descartado = hist.descartado || {};
 
   if (!rotas.length) {
     console.log('Nenhuma rota cadastrada ainda. Adicione rotas no painel.');
@@ -268,7 +288,7 @@ async function main() {
       if (!oferta) { console.log(`${rota.nome} ${mes}: sem preço disponível`); continue; }
       const chave = `${rota.origem}-${rota.destino}|${mes}`;
       const serie = (hist.precos[chave] = hist.precos[chave] || {});
-      const est = estatisticas(serie, hoje, cfg.janela_media_dias);
+      const est = comBase(estatisticas(serie, hoje, cfg.janela_media_dias), hist.base[chave], cfg.dias_minimos_de_historico);
       serie[hoje] = serie[hoje] ? Math.min(serie[hoje], oferta.preco) : oferta.preco;
       console.log(`${rota.nome} ${mes}: ${brl(oferta.preco)}` + (est.media ? ` (média ${brl(est.media)}, ${est.n} dias)` : ''));
       hist.ofertas[chave] = {
@@ -281,18 +301,53 @@ async function main() {
 
   if (consultas && falhas === consultas) throw new Error('Todas as consultas falharam. Confira o token da Travelpayouts.');
 
+  // média pronta: para meses ainda sem histórico, pega o histórico de preços do Google (uma vez por mês de viagem)
+  const semMedia = achados
+    .filter((c) => !hist.semeado[c.chave] && estatisticas(hist.precos[c.chave], hoje, cfg.janela_media_dias).n < cfg.dias_minimos_de_historico)
+    .sort((a, b) => a.preco - b.preco)
+    .slice(0, cfg.medias_google_por_rodada);
+  for (const c of semMedia) {
+    if (!podeGoogle(hist, cfg, hoje)) break;
+    try {
+      hist.google.usadas++;
+      const g = await confirmarGoogle(c.oferta);
+      hist.semeado[c.chave] = hoje;
+      if (!g) continue;
+      const serie = hist.precos[c.chave];
+      let pontos = 0;
+      for (const [dia, valor] of g.historico) {
+        if (dia < hoje && diasEntre(dia, hoje) <= 180) { if (!serie[dia]) serie[dia] = Math.round(valor); pontos++; }
+      }
+      if (pontos < cfg.dias_minimos_de_historico && g.faixa) hist.base[c.chave] = { media: (g.faixa[0] + g.faixa[1]) / 2, em: hoje };
+      c.google = g;
+      c.preco = g.preco;
+      serie[hoje] = Math.round(g.preco);
+      Object.assign(hist.ofertas[c.chave], { preco: g.preco, confirmado: true, faixa: g.faixa });
+      c.est = comBase(estatisticas(serie, hoje, cfg.janela_media_dias), hist.base[c.chave], cfg.dias_minimos_de_historico);
+      c.av = avaliar(c.preco, c.est, c.rota, cfg);
+      console.log(`${c.rota.nome} ${c.mes}: média do Google carregada (${pontos} dias de histórico` + (c.est.media ? `, média ${brl(c.est.media)})` : ')'));
+    } catch (e) {
+      console.log(`Não consegui a média do Google (${c.rota.nome} ${c.mes}): ${e.message}`);
+    }
+  }
+
   // candidatos a alerta (sem repetir o mesmo aviso)
-  let candidatos = achados.filter((c) => {
-    if (!c.av.motivos.length) return false;
+  // (compara o preço de cache com o do último aviso/descartado, para não gastar buscas do Google à toa)
+  const repetido = (c) => {
     const ult = hist.alertas[c.chave];
-    return !(ult && c.preco >= ult.preco * 0.97 && diasEntre(ult.data, hoje) < 7);
-  });
+    if (ult && diasEntre(ult.data, hoje) < 7 && (c.oferta.preco >= (ult.cache ?? ult.preco) * 0.97 || c.preco >= ult.preco * 0.97)) return true;
+    const desc = hist.descartado[c.chave];
+    return !!(desc && !c.google && diasEntre(desc.data, hoje) < 3 && c.oferta.preco >= desc.cache * 0.97);
+  };
+  let candidatos = achados.filter((c) => c.av.motivos.length && !repetido(c));
   candidatos.sort((a, b) => (b.av.desconto ?? 0) - (a.av.desconto ?? 0) || a.preco - b.preco);
 
   // confirmação em tempo real no Google Flights (opcional)
   if (SERPAPI_KEY) {
-    for (const c of candidatos.slice(0, cfg.confirmacoes_google_por_rodada)) {
+    for (const c of candidatos.filter((x) => !x.google).slice(0, cfg.confirmacoes_google_por_rodada)) {
+      if (!podeGoogle(hist, cfg, hoje)) break;
       try {
+        hist.google.usadas++;
         const g = await confirmarGoogle(c.oferta);
         if (!g) continue;
         c.google = g;
@@ -304,8 +359,12 @@ async function main() {
       }
     }
     candidatos = candidatos.filter((c) => {
-      if (!c.av.motivos.length) console.log(`${c.rota.nome} ${c.mes}: preço subiu no Google, aviso cancelado`);
-      return c.av.motivos.length;
+      if (!c.av.motivos.length) {
+        console.log(`${c.rota.nome} ${c.mes}: preço subiu no Google, aviso cancelado`);
+        hist.descartado[c.chave] = { cache: c.oferta.preco, data: hoje };
+        return false;
+      }
+      return !repetido(c);
     });
   }
 
@@ -319,7 +378,9 @@ async function main() {
       if (!m) { linhas.push(`\n✈️ <b>${esc(rota.nome)}</b>\nSem preço disponível ainda.`); continue; }
       linhas.push(`\n✈️ <b>${esc(rota.nome)}</b>\n💰 <b>${brl(m.preco)}</b> em ${nomeMes(m.mes)}\n📅 ${detalhes(m.oferta)}\n🔗 ${links(m.oferta)}`);
     }
-    linhas.push(`\nA média fica pronta depois de ${cfg.dias_minimos_de_historico} dias de coleta. Até lá, aviso só pelo preço-alvo.`);
+    linhas.push(SERPAPI_KEY
+      ? '\nJá busquei no Google o histórico de preços dos meses mais baratos. Os outros meses ganham média nas próximas rodadas.'
+      : `\nA média fica pronta depois de ${cfg.dias_minimos_de_historico} dias de coleta. Até lá, aviso só pelo preço-alvo.`);
     blocos.push(linhas.join('\n'));
   }
   if (candidatos.length) {
@@ -327,7 +388,7 @@ async function main() {
     const porRota = new Map();
     for (const c of candidatos) {
       desfazer.push([c.chave, hist.alertas[c.chave]]);
-      hist.alertas[c.chave] = { preco: c.preco, data: hoje };
+      hist.alertas[c.chave] = { preco: c.preco, cache: c.oferta.preco, data: hoje };
       const n = porRota.get(c.rota) || 0;
       porRota.set(c.rota, n + 1);
       if (n < cfg.max_avisos_por_rota) blocos.push(blocoOferta(c));
@@ -361,7 +422,7 @@ async function main() {
   // limpeza: guarda no máximo 180 dias e descarta meses que já passaram
   const mesAtual = hoje.slice(0, 7);
   for (const chave in hist.precos) {
-    if (chave.split('|')[1] < mesAtual) { delete hist.precos[chave]; delete hist.alertas[chave]; delete hist.ofertas[chave]; continue; }
+    if (chave.split('|')[1] < mesAtual) { for (const t of ['precos', 'alertas', 'ofertas', 'base', 'semeado', 'descartado']) delete hist[t][chave]; continue; }
     for (const dia in hist.precos[chave]) if (diasEntre(dia, hoje) > 180) delete hist.precos[chave][dia];
   }
 
