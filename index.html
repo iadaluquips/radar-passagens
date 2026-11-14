@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#14213d">
+<title>Radar de passagens</title>
+<style>
+  :root { --tinta:#14213d; --fundo:#f3efe6; --papel:#fffdf8; --linha:#ddd5c3; --ambar:#f59e0b; --verde:#1f8a70; --vermelho:#b4432f; --cinza:#6b7280; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--fundo); color:var(--tinta); font:16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  button, input, select { font: inherit; color: inherit; }
+  header { background:var(--tinta); color:#fff; padding:18px 16px 22px; }
+  header .topo { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  header h1 { margin:0; font-size:20px; letter-spacing:.3px; }
+  header .status { margin-top:8px; font-size:13px; color:#cbd5e1; }
+  .icone { background:rgba(255,255,255,.12); border:0; color:#fff; border-radius:10px; padding:8px 12px; font-size:14px; }
+  main { padding:14px 14px 96px; max-width:640px; margin:0 auto; }
+  .aviso { background:#fff4d6; border:1px solid #f1d38a; border-radius:12px; padding:12px 14px; font-size:14px; margin-bottom:14px; }
+  .aviso button { margin-top:8px; }
+  .vazio { text-align:center; color:var(--cinza); padding:44px 16px; }
+  .vazio b { display:block; color:var(--tinta); font-size:18px; margin-bottom:6px; }
+
+  .rota { background:var(--papel); border:1px solid var(--linha); border-radius:16px; margin-bottom:14px; overflow:hidden; }
+  .rota .cab { padding:14px 16px 12px; display:grid; grid-template-columns:1fr auto; gap:6px 12px; cursor:pointer; }
+  .codigos { font:700 24px/1 ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing:1px; }
+  .codigos span { color:var(--ambar); padding:0 6px; }
+  .nome { grid-column:1; font-size:13px; color:var(--cinza); }
+  .preco { grid-row:1 / span 2; grid-column:2; text-align:right; }
+  .preco b { font-size:22px; display:block; }
+  .preco small { color:var(--cinza); font-size:12px; }
+  .selo { display:inline-block; font-size:12px; font-weight:600; border-radius:999px; padding:2px 9px; background:#e7e2d4; color:#4b5563; white-space:nowrap; }
+  .selo.bom { background:#d9f2e9; color:var(--verde); }
+  .selo.caro { background:#f8e1dc; color:var(--vermelho); }
+  .picote { border-top:2px dashed var(--linha); margin:0 12px; }
+  .detalhe { display:none; padding:6px 16px 14px; }
+  .rota.aberta .detalhe { display:block; }
+  .graf { width:100%; height:54px; display:block; margin:8px 0 2px; }
+  .legenda { font-size:12px; color:var(--cinza); margin-bottom:8px; }
+  .mes { display:grid; grid-template-columns:64px 1fr auto; gap:2px 10px; align-items:center; padding:9px 0; border-top:1px solid #ece6d8; font-size:14px; }
+  .mes .m { font-weight:600; }
+  .mes .datas { grid-column:2 / span 2; font-size:12px; color:var(--cinza); }
+  .mes .datas a { color:#1d4ed8; }
+  .mes .v { text-align:right; font-weight:600; }
+  .acoes { display:flex; gap:8px; margin-top:12px; }
+  .btn { border:1px solid var(--linha); background:#fff; border-radius:10px; padding:9px 14px; font-size:14px; }
+  .btn.p { background:var(--tinta); color:#fff; border-color:var(--tinta); }
+  .btn.perigo { color:var(--vermelho); }
+  .btn:disabled { opacity:.5; }
+  .fab { position:fixed; left:50%; transform:translateX(-50%); bottom:18px; background:var(--ambar); color:#1a1300; border:0; border-radius:999px; padding:14px 26px; font-weight:700; font-size:16px; box-shadow:0 6px 18px rgba(20,33,61,.28); }
+
+  .fundo { position:fixed; inset:0; background:rgba(20,33,61,.5); display:none; align-items:flex-end; justify-content:center; z-index:10; }
+  .fundo.aberto { display:flex; }
+  .folha { background:var(--papel); width:100%; max-width:640px; max-height:92vh; overflow:auto; border-radius:18px 18px 0 0; padding:18px 16px 22px; }
+  .folha h2 { margin:0 0 12px; font-size:18px; }
+  label { display:block; font-size:13px; font-weight:600; margin:12px 0 5px; }
+  label small { font-weight:400; color:var(--cinza); }
+  input[type=text], input[type=number], input[type=password] { width:100%; border:1px solid var(--linha); border-radius:10px; padding:11px 12px; background:#fff; }
+  .dupla { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .seg { display:grid; grid-auto-flow:column; grid-auto-columns:1fr; border:1px solid var(--linha); border-radius:10px; overflow:hidden; background:#fff; }
+  .seg button { border:0; background:none; padding:10px 6px; font-size:14px; }
+  .seg button.on { background:var(--tinta); color:#fff; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .chips button { border:1px solid var(--linha); background:#fff; border-radius:999px; padding:6px 11px; font-size:13px; }
+  .chips button.on { background:var(--ambar); border-color:var(--ambar); color:#1a1300; font-weight:600; }
+  .check { display:flex; align-items:center; gap:8px; margin-top:14px; font-size:14px; font-weight:400; }
+  .check input { width:20px; height:20px; }
+  .erro { color:var(--vermelho); font-size:13px; margin-top:10px; min-height:18px; }
+  .rodape { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
+  .dica { font-size:13px; color:var(--cinza); margin:6px 0 0; }
+  #toast { position:fixed; left:50%; transform:translateX(-50%); bottom:84px; background:var(--tinta); color:#fff; padding:10px 16px; border-radius:10px; font-size:14px; opacity:0; transition:opacity .2s; pointer-events:none; z-index:20; max-width:90vw; text-align:center; }
+  #toast.on { opacity:1; }
+  @media (prefers-reduced-motion: reduce) { #toast { transition:none; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="topo">
+    <h1>✈ Radar de passagens</h1>
+    <button class="icone" id="btnAjustes">Ajustes</button>
+  </div>
+  <div class="status" id="status">Carregando…</div>
+</header>
+
+<main>
+  <div id="avisos"></div>
+  <div id="lista"></div>
+</main>
+
+<button class="fab" id="btnNova">+ Adicionar rota</button>
+
+<!-- formulário de rota -->
+<div class="fundo" id="dlgRota">
+  <div class="folha">
+    <h2 id="tituloRota">Nova rota</h2>
+    <div class="dupla">
+      <div><label for="fDe">De</label><input type="text" id="fDe" list="aeroportos" placeholder="Ex.: SAO" autocomplete="off"></div>
+      <div><label for="fPara">Para</label><input type="text" id="fPara" list="aeroportos" placeholder="Ex.: LIS" autocomplete="off"></div>
+    </div>
+    <p class="dica">Escolha na lista ou digite o código de 3 letras do aeroporto ou da cidade.</p>
+
+    <label>Tipo de viagem</label>
+    <div class="seg" id="fTipo"><button data-v="iv" class="on">Ida e volta</button><button data-v="ida">Só ida</button></div>
+
+    <label>Quando</label>
+    <div class="seg" id="fQuando"><button data-v="prox" class="on">Próximos 12 meses</button><button data-v="meses">Escolher meses</button></div>
+    <div class="chips" id="fMeses" hidden></div>
+
+    <div id="blocoDias">
+      <label>Duração da viagem <small>(dias)</small></label>
+      <div class="dupla">
+        <input type="number" id="fMin" inputmode="numeric" min="1" max="90" placeholder="mínimo">
+        <input type="number" id="fMax" inputmode="numeric" min="1" max="90" placeholder="máximo">
+      </div>
+    </div>
+
+    <label for="fAlvo">Preço-alvo em R$ <small>(opcional — avisa sempre que ficar abaixo)</small></label>
+    <input type="number" id="fAlvo" inputmode="numeric" min="0" placeholder="Ex.: 3500">
+
+    <label class="check"><input type="checkbox" id="fDireto"> Só voos diretos</label>
+
+    <div class="erro" id="erroRota"></div>
+    <div class="rodape">
+      <button class="btn" id="btnCancelarRota">Cancelar</button>
+      <button class="btn p" id="btnSalvarRota">Salvar rota</button>
+    </div>
+  </div>
+</div>
+
+<!-- ajustes -->
+<div class="fundo" id="dlgAjustes">
+  <div class="folha">
+    <h2>Ajustes</h2>
+    <label for="aToken">Código de acesso <small>(token do GitHub — fica só neste aparelho)</small></label>
+    <input type="password" id="aToken" placeholder="github_pat_…" autocomplete="off">
+    <p class="dica">Sem o código o painel só mostra os preços. Com ele você adiciona e edita rotas.</p>
+
+    <label for="aDesc">Avisar quando estiver quantos % abaixo da média</label>
+    <input type="number" id="aDesc" inputmode="numeric" min="1" max="90">
+
+    <label for="aDias">Dias de coleta antes de confiar na média</label>
+    <input type="number" id="aDias" inputmode="numeric" min="1" max="60">
+
+    <div class="erro" id="erroAjustes"></div>
+    <div class="rodape">
+      <button class="btn" id="btnRodar">Rodar agora</button>
+      <button class="btn" id="btnFecharAjustes">Fechar</button>
+      <button class="btn p" id="btnSalvarAjustes">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- confirmação -->
+<div class="fundo" id="dlgConf">
+  <div class="folha">
+    <h2 id="confTxt">Remover esta rota?</h2>
+    <div class="rodape">
+      <button class="btn" id="confNao">Cancelar</button>
+      <button class="btn p" id="confSim">Remover</button>
+    </div>
+  </div>
+</div>
+
+<datalist id="aeroportos"></datalist>
+<div id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- onde está o robô ----------
+  var DONO = 'iadaluquips', REPO = 'radar-passagens', RAMO = 'main';
+  if (/\.github\.io$/.test(location.hostname)) {
+    DONO = location.hostname.split('.')[0];
+    var seg = location.pathname.split('/').filter(Boolean)[0];
+    if (seg && !/\.html?$/.test(seg)) REPO = seg;
+  }
+  var API = 'https://api.github.com/repos/' + DONO + '/' + REPO;
+  var RAW = 'https://raw.githubusercontent.com/' + DONO + '/' + REPO + '/' + RAMO + '/';
+
+  var LUGARES = {
+    SAO:'São Paulo (todos)', GRU:'São Paulo – Guarulhos', CGH:'São Paulo – Congonhas', VCP:'Campinas', RIO:'Rio de Janeiro (todos)', GIG:'Rio – Galeão', SDU:'Rio – Santos Dumont',
+    BSB:'Brasília', BHZ:'Belo Horizonte (todos)', CNF:'Belo Horizonte – Confins', SSA:'Salvador', REC:'Recife', FOR:'Fortaleza', NAT:'Natal', MCZ:'Maceió', AJU:'Aracaju', JPA:'João Pessoa',
+    SLZ:'São Luís', THE:'Teresina', BEL:'Belém', MAO:'Manaus', CWB:'Curitiba', FLN:'Florianópolis', POA:'Porto Alegre', IGU:'Foz do Iguaçu', NVT:'Navegantes', JOI:'Joinville', VIX:'Vitória',
+    GYN:'Goiânia', CGB:'Cuiabá', CGR:'Campo Grande', PMW:'Palmas', PVH:'Porto Velho', BPS:'Porto Seguro', FEN:'Fernando de Noronha', RAO:'Ribeirão Preto', UDI:'Uberlândia', LDB:'Londrina', MGF:'Maringá',
+    LIS:'Lisboa', OPO:'Porto', MAD:'Madri', BCN:'Barcelona', PAR:'Paris', LON:'Londres', ROM:'Roma', MIL:'Milão', AMS:'Amsterdã', FRA:'Frankfurt', ZRH:'Zurique', IST:'Istambul', DXB:'Dubai',
+    NYC:'Nova York', MIA:'Miami', MCO:'Orlando', FLL:'Fort Lauderdale', LAX:'Los Angeles', YTO:'Toronto', CUN:'Cancún', MEX:'Cidade do México', PUJ:'Punta Cana', PTY:'Cidade do Panamá',
+    BUE:'Buenos Aires', BRC:'Bariloche', SCL:'Santiago', MVD:'Montevidéu', LIM:'Lima', BOG:'Bogotá', CTG:'Cartagena', ASU:'Assunção', TYO:'Tóquio', JNB:'Joanesburgo'
+  };
+  var MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+
+  // ---------- estado ----------
+  var arq = { config: {}, rotas: [] }, sha = null, hist = { precos: {}, ofertas: {} };
+  var token = '', editando = -1, abertas = {};
+  try { token = localStorage.getItem('radar_token') || ''; } catch (e) {}
+
+  // ---------- utilidades ----------
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
+  function brl(n) { return 'R$ ' + Math.round(n).toLocaleString('pt-BR'); }
+  function nomeMes(ym) { return MESES[Number(ym.slice(5, 7)) - 1] + '/' + ym.slice(2, 4); }
+  function dataBR(iso) { return iso.slice(8, 10) + '/' + iso.slice(5, 7); }
+  function dias(a, b) { return Math.round((Date.parse(b) - Date.parse(a)) / 864e5); }
+  function proximosMeses(n) {
+    var d = new Date(), out = [];
+    for (var i = 0; i <= n; i++) { var x = new Date(d.getFullYear(), d.getMonth() + i, 1); out.push(x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0')); }
+    return out;
+  }
+  function toast(msg) { var t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(function () { t.classList.remove('on'); }, 3200); }
+  function b64(str) { var b = new TextEncoder().encode(str), s = ''; for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s); }
+  function deB64(b) { var s = atob(b.replace(/\s/g, '')), a = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return new TextDecoder().decode(a); }
+  function codigo(v) { var m = String(v || '').trim().toUpperCase().match(/^[A-Z]{3}/); return m ? m[0] : ''; }
+  function lugar(c) { return (LUGARES[c] || c).replace(/ \(todos\)| – .*/, ''); }
+
+  // ---------- GitHub ----------
+  function gh(caminho, opt) {
+    opt = opt || {};
+    var h = { 'Accept': opt.cru ? 'application/vnd.github.raw+json' : 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+    if (token) h.Authorization = 'Bearer ' + token;
+    if (opt.body) h['Content-Type'] = 'application/json';
+    return fetch(API + caminho, { method: opt.method || 'GET', headers: h, body: opt.body ? JSON.stringify(opt.body) : undefined, cache: 'no-store' });
+  }
+
+  async function carregarRotas() {
+    if (token) {
+      var r = await gh('/contents/rotas.json?ref=' + RAMO);
+      if (r.status === 401) throw new Error('Código de acesso inválido ou vencido. Confira em Ajustes.');
+      if (r.status === 404) { arq = { config: {}, rotas: [] }; sha = null; return; }
+      if (!r.ok) throw new Error('GitHub respondeu ' + r.status);
+      var j = await r.json();
+      sha = j.sha; arq = JSON.parse(deB64(j.content));
+    } else {
+      var r2 = await fetch(RAW + 'rotas.json?t=' + Date.now(), { cache: 'no-store' });
+      if (r2.ok) arq = await r2.json();
+    }
+    arq.config = arq.config || {}; arq.rotas = arq.rotas || [];
+  }
+
+  async function carregarHist() {
+    var r = token ? await gh('/contents/historico.json?ref=' + RAMO, { cru: true }) : await fetch(RAW + 'historico.json?t=' + Date.now(), { cache: 'no-store' });
+    if (r.ok) { try { hist = await r.json(); } catch (e) {} }
+    hist.precos = hist.precos || {}; hist.ofertas = hist.ofertas || {};
+  }
+
+  async function salvarRotas(msg, repetir) {
+    if (!token) throw new Error('Cole o código de acesso em Ajustes para poder salvar.');
+    var corpo = { message: msg, content: b64(JSON.stringify(arq, null, 2) + '\n'), branch: RAMO };
+    if (sha) corpo.sha = sha;
+    var r = await gh('/contents/rotas.json', { method: 'PUT', body: corpo });
+    if ((r.status === 409 || r.status === 422) && !repetir) {
+      var g = await gh('/contents/rotas.json?ref=' + RAMO);
+      if (g.ok) { sha = (await g.json()).sha; return salvarRotas(msg, true); }
+    }
+    if (r.status === 401) throw new Error('Código de acesso inválido ou vencido.');
+    if (r.status === 403 || r.status === 404) throw new Error('O código de acesso não tem permissão para gravar neste repositório.');
+    if (!r.ok) throw new Error('Não consegui salvar (erro ' + r.status + ').');
+    sha = (await r.json()).content.sha;
+  }
+
+  // ---------- cálculo ----------
+  function resumoMes(chave) {
+    var serie = hist.precos[chave]; if (!serie) return null;
+    var ds = Object.keys(serie).sort(); if (!ds.length) return null;
+    var ult = ds[ds.length - 1], janela = arq.config.janela_media_dias || 60, ant = [];
+    for (var i = 0; i < ds.length - 1; i++) if (dias(ds[i], ult) <= janela) ant.push(serie[ds[i]]);
+    var of = hist.ofertas[chave] || null;
+    var preco = of && of.em === ult ? of.preco : serie[ult];
+    var media = ant.length ? ant.reduce(function (a, b) { return a + b; }, 0) / ant.length : null;
+    var minDias = arq.config.dias_minimos_de_historico || 5;
+    var desc = media && ant.length >= minDias ? (media - preco) / media * 100 : null;
+    return { mes: chave.split('|')[1], preco: preco, media: media, n: ant.length, desc: desc, oferta: of, serie: serie, dias: ds, minDias: minDias };
+  }
+  function selo(m) {
+    if (m.desc === null) return '<span class="selo">média em ' + Math.min(m.n, m.minDias) + '/' + m.minDias + ' dias</span>';
+    var p = Math.round(m.desc), lim = arq.config.desconto_minimo_pct || 15;
+    if (p >= lim) return '<span class="selo bom">' + p + '% abaixo da média</span>';
+    if (p <= -10) return '<span class="selo caro">' + Math.abs(p) + '% acima da média</span>';
+    if (p === 0) return '<span class="selo">na média</span>';
+    return '<span class="selo">' + (p >= 0 ? p + '% abaixo' : Math.abs(p) + '% acima') + ' da média</span>';
+  }
+  function grafico(m) {
+    var v = m.dias.map(function (d) { return m.serie[d]; });
+    if (v.length < 2) return '';
+    var lo = Math.min.apply(null, v), hi = Math.max.apply(null, v), amp = hi - lo || 1, W = 300, H = 54, p = 5;
+    var pts = v.map(function (x, i) { return (p + i * (W - 2 * p) / (v.length - 1)).toFixed(1) + ',' + (H - p - (x - lo) / amp * (H - 2 * p)).toFixed(1); });
+    var ult = pts[pts.length - 1].split(',');
+    return '<svg class="graf" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Histórico de preço">' +
+      '<polyline fill="none" stroke="#14213d" stroke-width="2" vector-effect="non-scaling-stroke" points="' + pts.join(' ') + '"/>' +
+      '<circle cx="' + ult[0] + '" cy="' + ult[1] + '" r="3.5" fill="#f59e0b"/></svg>' +
+      '<div class="legenda">Preço de ' + nomeMes(m.mes) + ' nos últimos ' + v.length + ' dias · de ' + brl(lo) + ' a ' + brl(hi) + '</div>';
+  }
+  function linkGoogle(of) {
+    return 'https://www.google.com/travel/flights?q=' + encodeURIComponent('Flights from ' + of.de + ' to ' + of.para + ' on ' + of.ida + (of.volta ? ' through ' + of.volta : '')) + '&curr=BRL';
+  }
+
+  // ---------- tela ----------
+  function desenhar() {
+    var av = '';
+    if (!token) av += '<div class="aviso">Você está só visualizando. Para adicionar ou editar rotas, cole o código de acesso.<br><button class="btn p" data-acao="ajustes">Colar código de acesso</button></div>';
+    $('avisos').innerHTML = av;
+
+    var st = [];
+    if (hist.atualizado_em) {
+      var h = Math.round((Date.now() - Date.parse(hist.atualizado_em)) / 36e5);
+      st.push('Última busca: ' + (h < 1 ? 'há menos de 1 hora' : h < 48 ? 'há ' + h + ' h' : 'há ' + Math.round(h / 24) + ' dias'));
+    } else st.push('O robô ainda não fez nenhuma busca');
+    st.push(arq.rotas.length + (arq.rotas.length === 1 ? ' rota' : ' rotas'));
+    $('status').textContent = st.join(' · ');
+
+    if (!arq.rotas.length) {
+      $('lista').innerHTML = '<div class="vazio"><b>Nenhuma rota ainda</b>Toque em “Adicionar rota” para o radar começar a rastrear.</div>';
+      return;
+    }
+    $('lista').innerHTML = arq.rotas.map(function (r, i) {
+      var pre = r.origem + '-' + r.destino + '|';
+      var ms = Object.keys(hist.precos).filter(function (k) { return k.indexOf(pre) === 0; }).sort().map(resumoMes).filter(Boolean);
+      var melhor = ms.slice().sort(function (a, b) { return a.preco - b.preco; })[0];
+      var topo = melhor
+        ? '<div class="preco"><b>' + brl(melhor.preco) + '</b><small>melhor: ' + nomeMes(melhor.mes) + '</small></div>'
+        : '<div class="preco"><small>aguardando<br>a 1ª busca</small></div>';
+      var linhas = ms.map(function (m) {
+        var d = '';
+        if (m.oferta && m.oferta.ida) {
+          d = dataBR(m.oferta.ida) + (m.oferta.volta ? ' a ' + dataBR(m.oferta.volta) + ' (' + dias(m.oferta.ida, m.oferta.volta) + ' dias)' : '') +
+            (m.oferta.escalas === 0 ? ' · direto' : '') + (m.oferta.confirmado ? ' · confirmado no Google' : '') +
+            ' · <a href="' + esc(linkGoogle(m.oferta)) + '" target="_blank" rel="noopener">ver voos</a>';
+        }
+        return '<div class="mes"><div class="m">' + nomeMes(m.mes) + '</div><div>' + selo(m) + '</div><div class="v">' + brl(m.preco) + '</div>' +
+          (d ? '<div class="datas">' + d + '</div>' : '') + '</div>';
+      }).join('');
+      var regras = [r.ida_e_volta === false ? 'só ida' : 'ida e volta'];
+      if (r.ida_e_volta !== false && (r.dias_min || r.dias_max)) regras.push((r.dias_min || 1) + ' a ' + (r.dias_max || 60) + ' dias');
+      regras.push(Array.isArray(r.meses) && r.meses.length ? r.meses.map(nomeMes).join(', ') : 'próximos 12 meses');
+      if (r.preco_alvo) regras.push('alvo ' + brl(r.preco_alvo));
+      if (r.max_escalas === 0) regras.push('só direto');
+      return '<section class="rota' + (abertas[i] ? ' aberta' : '') + '">' +
+        '<div class="cab" data-acao="abrir" data-i="' + i + '"><div class="codigos">' + esc(r.origem) + '<span>→</span>' + esc(r.destino) + '</div>' + topo +
+        '<div class="nome">' + esc(r.nome || '') + (melhor ? ' · ' + selo(melhor) : '') + '</div></div>' +
+        '<div class="picote"></div><div class="detalhe">' +
+        (melhor ? grafico(melhor) : '') +
+        '<div class="legenda">' + esc(regras.join(' · ')) + '</div>' +
+        (linhas || '<div class="legenda">Os preços aparecem aqui depois da próxima busca do robô (07:17 e 18:17), ou toque em Ajustes → Rodar agora.</div>') +
+        '<div class="acoes"><button class="btn" data-acao="editar" data-i="' + i + '">Editar</button><button class="btn perigo" data-acao="remover" data-i="' + i + '">Remover</button></div>' +
+        '</div></section>';
+    }).join('');
+  }
+
+  // ---------- formulário de rota ----------
+  var tipo = 'iv', quando = 'prox', mesesSel = {};
+  function marcarSeg(id, v) { [].forEach.call($(id).children, function (b) { b.classList.toggle('on', b.dataset.v === v); }); }
+  function desenharMeses() {
+    $('fMeses').hidden = quando !== 'meses';
+    $('fMeses').innerHTML = proximosMeses(11).map(function (m) { return '<button type="button" data-m="' + m + '" class="' + (mesesSel[m] ? 'on' : '') + '">' + nomeMes(m) + '</button>'; }).join('');
+    $('blocoDias').style.display = tipo === 'iv' ? '' : 'none';
+  }
+  function abrirRota(i) {
+    if (!token) { abrirAjustes(); toast('Cole o código de acesso para adicionar rotas'); return; }
+    editando = i;
+    var r = i >= 0 ? arq.rotas[i] : {};
+    $('tituloRota').textContent = i >= 0 ? 'Editar rota' : 'Nova rota';
+    $('fDe').value = r.origem || ''; $('fPara').value = r.destino || '';
+    tipo = r.ida_e_volta === false ? 'ida' : 'iv';
+    quando = Array.isArray(r.meses) && r.meses.length ? 'meses' : 'prox';
+    mesesSel = {}; (r.meses || []).forEach(function (m) { mesesSel[m] = true; });
+    $('fMin').value = r.dias_min || (i >= 0 ? '' : 5); $('fMax').value = r.dias_max || (i >= 0 ? '' : 15);
+    $('fAlvo').value = r.preco_alvo || ''; $('fDireto').checked = r.max_escalas === 0;
+    $('erroRota').textContent = '';
+    marcarSeg('fTipo', tipo); marcarSeg('fQuando', quando); desenharMeses();
+    $('dlgRota').classList.add('aberto');
+  }
+  async function salvarRota() {
+    var de = codigo($('fDe').value), para = codigo($('fPara').value), erro = '';
+    var mm = Object.keys(mesesSel).filter(function (m) { return mesesSel[m]; }).sort();
+    var min = parseInt($('fMin').value, 10) || 0, max = parseInt($('fMax').value, 10) || 0;
+    if (!de || !para) erro = 'Preencha origem e destino com o código de 3 letras.';
+    else if (de === para) erro = 'Origem e destino precisam ser diferentes.';
+    else if (quando === 'meses' && !mm.length) erro = 'Escolha pelo menos um mês.';
+    else if (tipo === 'iv' && min && max && min > max) erro = 'A duração mínima está maior que a máxima.';
+    if (erro) { $('erroRota').textContent = erro; return; }
+    var r = { nome: lugar(de) + ' → ' + lugar(para), origem: de, destino: para, ida_e_volta: tipo === 'iv' };
+    if (quando === 'meses') r.meses = mm; else r.proximos_meses = 11;
+    if (tipo === 'iv') { r.dias_min = min || 1; r.dias_max = max || 30; }
+    var alvo = parseInt($('fAlvo').value, 10); if (alvo > 0) r.preco_alvo = alvo;
+    if ($('fDireto').checked) r.max_escalas = 0;
+    var copia = JSON.stringify(arq.rotas);
+    if (editando >= 0) arq.rotas[editando] = r; else arq.rotas.push(r);
+    var b = $('btnSalvarRota'); b.disabled = true; b.textContent = 'Salvando…';
+    try {
+      await salvarRotas((editando >= 0 ? 'Edita rota ' : 'Adiciona rota ') + de + '-' + para);
+      $('dlgRota').classList.remove('aberto'); desenhar();
+      toast('Rota salva. O radar pega na próxima busca.');
+    } catch (e) { arq.rotas = JSON.parse(copia); $('erroRota').textContent = e.message; }
+    b.disabled = false; b.textContent = 'Salvar rota';
+  }
+
+  // ---------- ajustes ----------
+  function abrirAjustes() {
+    $('aToken').value = token;
+    $('aDesc').value = arq.config.desconto_minimo_pct || 15;
+    $('aDias').value = arq.config.dias_minimos_de_historico || 5;
+    $('erroAjustes').textContent = '';
+    $('dlgAjustes').classList.add('aberto');
+  }
+  async function salvarAjustes() {
+    var novo = $('aToken').value.trim(), mudouToken = novo !== token;
+    var b = $('btnSalvarAjustes'); b.disabled = true;
+    try {
+      if (mudouToken) {
+        token = novo;
+        try { if (token) localStorage.setItem('radar_token', token); else localStorage.removeItem('radar_token'); } catch (e) {}
+        await carregarRotas(); await carregarHist();
+      }
+      var d = parseInt($('aDesc').value, 10) || 15, n = parseInt($('aDias').value, 10) || 5;
+      if (token && (d !== (arq.config.desconto_minimo_pct || 15) || n !== (arq.config.dias_minimos_de_historico || 5))) {
+        arq.config.desconto_minimo_pct = d; arq.config.dias_minimos_de_historico = n;
+        await salvarRotas('Atualiza ajustes');
+      }
+      $('dlgAjustes').classList.remove('aberto'); desenhar(); toast('Ajustes salvos');
+    } catch (e) { $('erroAjustes').textContent = e.message; }
+    b.disabled = false;
+  }
+  async function rodarAgora() {
+    if (!token) { $('erroAjustes').textContent = 'Cole o código de acesso primeiro.'; return; }
+    var b = $('btnRodar'); b.disabled = true;
+    try {
+      var r = await gh('/actions/workflows/radar.yml/dispatches', { method: 'POST', body: { ref: RAMO } });
+      if (r.status === 204) { $('dlgAjustes').classList.remove('aberto'); toast('Busca iniciada. Atualize o painel em 2 minutos.'); }
+      else if (r.status === 403 || r.status === 404) $('erroAjustes').textContent = 'O código de acesso não tem a permissão “Actions”. As buscas automáticas continuam normais.';
+      else $('erroAjustes').textContent = 'Não consegui iniciar (erro ' + r.status + ').';
+    } catch (e) { $('erroAjustes').textContent = 'Sem conexão com o GitHub.'; }
+    b.disabled = false;
+  }
+
+  // ---------- remover ----------
+  var remover = -1;
+  async function confirmarRemocao() {
+    var copia = JSON.stringify(arq.rotas), r = arq.rotas[remover];
+    arq.rotas.splice(remover, 1); abertas = {};
+    $('dlgConf').classList.remove('aberto');
+    try { await salvarRotas('Remove rota ' + r.origem + '-' + r.destino); toast('Rota removida'); }
+    catch (e) { arq.rotas = JSON.parse(copia); toast(e.message); }
+    desenhar();
+  }
+
+  // ---------- eventos ----------
+  document.addEventListener('click', function (ev) {
+    var a = ev.target.closest('[data-acao]'); if (!a) return;
+    if (ev.target.closest('a')) return;
+    var i = Number(a.dataset.i);
+    if (a.dataset.acao === 'abrir') { abertas[i] = !abertas[i]; desenhar(); }
+    else if (a.dataset.acao === 'editar') abrirRota(i);
+    else if (a.dataset.acao === 'ajustes') abrirAjustes();
+    else if (a.dataset.acao === 'remover') {
+      if (!token) { abrirAjustes(); return; }
+      remover = i; $('confTxt').textContent = 'Remover a rota ' + arq.rotas[i].origem + ' → ' + arq.rotas[i].destino + '?';
+      $('dlgConf').classList.add('aberto');
+    }
+  });
+  $('btnNova').onclick = function () { abrirRota(-1); };
+  $('btnAjustes').onclick = abrirAjustes;
+  $('btnCancelarRota').onclick = function () { $('dlgRota').classList.remove('aberto'); };
+  $('btnSalvarRota').onclick = salvarRota;
+  $('btnFecharAjustes').onclick = function () { $('dlgAjustes').classList.remove('aberto'); };
+  $('btnSalvarAjustes').onclick = salvarAjustes;
+  $('btnRodar').onclick = rodarAgora;
+  $('confNao').onclick = function () { $('dlgConf').classList.remove('aberto'); };
+  $('confSim').onclick = confirmarRemocao;
+  $('fTipo').onclick = function (e) { var v = e.target.dataset.v; if (v) { tipo = v; marcarSeg('fTipo', v); desenharMeses(); } };
+  $('fQuando').onclick = function (e) { var v = e.target.dataset.v; if (v) { quando = v; marcarSeg('fQuando', v); desenharMeses(); } };
+  $('fMeses').onclick = function (e) { var m = e.target.dataset.m; if (m) { mesesSel[m] = !mesesSel[m]; e.target.classList.toggle('on', mesesSel[m]); $('erroRota').textContent = ''; } };
+  [].forEach.call(document.querySelectorAll('.fundo'), function (f) { f.addEventListener('click', function (e) { if (e.target === f) f.classList.remove('aberto'); }); });
+
+  $('aeroportos').innerHTML = Object.keys(LUGARES).map(function (c) { return '<option value="' + c + ' — ' + esc(LUGARES[c]) + '">'; }).join('');
+
+  // ---------- início ----------
+  (async function () {
+    try { await carregarRotas(); await carregarHist(); }
+    catch (e) { desenhar(); $('status').textContent = 'Não consegui carregar'; $('avisos').insertAdjacentHTML('afterbegin', '<div class="aviso">' + esc(e.message) + '</div>'); return; }
+    desenhar();
+  })();
+})();
+</script>
+</body>
+</html>
