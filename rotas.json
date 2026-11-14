@@ -30,8 +30,8 @@
       "dias_max": 15
     },
     {
-      "nome": "JJG → Maceió",
-      "origem": "JJG",
+      "nome": "Florianópolis → Maceió",
+      "origem": "FLN",
       "destino": "MCZ",
       "ida_e_volta": true,
       "proximos_meses": 11,
