@@ -30,8 +30,8 @@
       "dias_max": 15
     },
     {
-      "nome": "JAG → Maceió",
-      "origem": "JAG",
+      "nome": "JJG → Maceió",
+      "origem": "JJG",
       "destino": "MCZ",
       "ida_e_volta": true,
       "proximos_meses": 11,
