@@ -1,7 +1,7 @@
 {
   "config": {
     "desconto_minimo_pct": 15,
-    "dias_minimos_de_historico": 5,
+    "dias_minimos_de_historico": 300,
     "janela_media_dias": 60,
     "confirmacoes_google_por_rodada": 3,
     "max_avisos_por_rota": 3
