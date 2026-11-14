@@ -6,5 +6,15 @@
     "confirmacoes_google_por_rodada": 3,
     "max_avisos_por_rota": 3
   },
-  "rotas": []
+  "rotas": [
+    {
+      "nome": "Florianópolis → Rio de Janeiro",
+      "origem": "FLN",
+      "destino": "RIO",
+      "ida_e_volta": true,
+      "proximos_meses": 11,
+      "dias_min": 5,
+      "dias_max": 15
+    }
+  ]
 }
