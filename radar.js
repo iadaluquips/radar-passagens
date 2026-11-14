@@ -22,6 +22,14 @@ const PADRAO = {
   max_avisos_por_rota: 3            // no máximo X datas por rota em cada aviso
 };
 
+const CIAS = {
+  G3: 'Gol', LA: 'LATAM', JJ: 'LATAM', AD: 'Azul', '2Z': 'Voepass', TP: 'TAP', AA: 'American Airlines', UA: 'United', DL: 'Delta',
+  AF: 'Air France', KL: 'KLM', IB: 'Iberia', UX: 'Air Europa', LH: 'Lufthansa', LX: 'Swiss', BA: 'British Airways', AZ: 'ITA Airways',
+  TK: 'Turkish Airlines', EK: 'Emirates', QR: 'Qatar Airways', CM: 'Copa Airlines', AV: 'Avianca', AR: 'Aerolíneas Argentinas',
+  H2: 'Sky Airline', JA: 'JetSMART', AC: 'Air Canada', AM: 'Aeroméxico', ET: 'Ethiopian', AT: 'Royal Air Maroc'
+};
+const nomeCia = (c) => (c ? CIAS[c] || 'cia ' + c : '');
+
 // ---------- utilidades ----------
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 const brl = (n) => 'R$ ' + Math.round(n).toLocaleString('pt-BR');
@@ -185,12 +193,23 @@ async function enviarTelegram(texto) {
   }
 }
 
+function detalhes(of) {
+  const p = [of.volta ? `${dataBR(of.ida)} a ${dataBR(of.volta)} (${diasEntre(of.ida, of.volta)} dias)` : dataBR(of.ida)];
+  if (of.cia) p.push(nomeCia(of.cia));
+  p.push(of.escalas === 0 ? 'direto' : of.escalas === 1 ? '1 escala' : `${of.escalas} escalas`);
+  return p.map(esc).join(' · ');
+}
+function links(of, urlGoogle) {
+  const l = [`<a href="${esc(urlGoogle || linkGoogle(of))}">Ver no Google Flights</a>`];
+  if (of.link) l.push(`<a href="${esc(of.link)}">Aviasales</a>`);
+  return l.join('  |  ');
+}
+
 function blocoOferta(c) {
   const of = c.oferta;
-  const datas = of.volta ? `${dataBR(of.ida)} a ${dataBR(of.volta)} (${diasEntre(of.ida, of.volta)} dias)` : dataBR(of.ida);
   const linhas = [];
   linhas.push(`✈️ <b>${esc(c.rota.nome)}</b>`);
-  linhas.push(`📅 ${datas}`);
+  linhas.push(`📅 ${detalhes(of)}`);
   linhas.push(`💰 <b>${brl(c.preco)}</b>` + (c.av.nota !== null ? `  ·  nota ${c.av.nota}/100` : ''));
   linhas.push('✅ ' + c.av.motivos.map(esc).join(' · '));
   if (c.google) {
@@ -200,9 +219,7 @@ function blocoOferta(c) {
   } else {
     linhas.push('⚠️ Preço de cache (pode ter algumas horas). Confirme no link.');
   }
-  const links = [`<a href="${esc((c.google && c.google.url) || linkGoogle(of))}">Google Flights</a>`];
-  if (of.link) links.push(`<a href="${esc(of.link)}">Aviasales</a>`);
-  linhas.push('🔗 ' + links.join('  |  '));
+  linhas.push('🔗 ' + links(of, c.google && c.google.url));
   return linhas.join('\n');
 }
 
@@ -211,6 +228,8 @@ async function main() {
   if (!TP_TOKEN) throw new Error('Falta o secret TRAVELPAYOUTS_TOKEN.');
   const arq = JSON.parse(fs.readFileSync(ARQ_ROTAS, 'utf8'));
   const cfg = Object.assign({}, PADRAO, arq.config || {});
+  cfg.dias_minimos_de_historico = Math.max(1, Math.min(30, Number(cfg.dias_minimos_de_historico) || 5));
+  cfg.desconto_minimo_pct = Math.max(1, Math.min(90, Number(cfg.desconto_minimo_pct) || 15));
   const rotas = arq.rotas || [];
 
   const hist = fs.existsSync(ARQ_HIST) ? JSON.parse(fs.readFileSync(ARQ_HIST, 'utf8')) : {};
@@ -297,9 +316,10 @@ async function main() {
     const linhas = ['🟢 <b>Radar de passagens ligado!</b>', 'Menor preço de hoje em cada rota:'];
     for (const rota of rotas) {
       const m = achados.filter((c) => c.rota === rota).sort((a, b) => a.preco - b.preco)[0];
-      linhas.push(m ? `• ${esc(rota.nome)}: ${brl(m.preco)} em ${nomeMes(m.mes)}` : `• ${esc(rota.nome)}: sem preço disponível ainda`);
+      if (!m) { linhas.push(`\n✈️ <b>${esc(rota.nome)}</b>\nSem preço disponível ainda.`); continue; }
+      linhas.push(`\n✈️ <b>${esc(rota.nome)}</b>\n💰 <b>${brl(m.preco)}</b> em ${nomeMes(m.mes)}\n📅 ${detalhes(m.oferta)}\n🔗 ${links(m.oferta)}`);
     }
-    linhas.push(`A média fica confiável depois de ${cfg.dias_minimos_de_historico} dias de coleta.`);
+    linhas.push(`\nA média fica pronta depois de ${cfg.dias_minimos_de_historico} dias de coleta. Até lá, aviso só pelo preço-alvo.`);
     blocos.push(linhas.join('\n'));
   }
   if (candidatos.length) {
@@ -320,20 +340,22 @@ async function main() {
 
   // resumo semanal: segunda-feira, na rodada da manhã
   const agora = new Date();
-  if (!primeiraVez && agora.getUTCDay() === 1 && agora.getUTCHours() < 15 && hist.resumo !== hoje) {
-    const linhas = ['📊 <b>Resumo da semana</b>'];
+  const manual = process.env.GITHUB_EVENT_NAME === 'workflow_dispatch';
+  const semanal = agora.getUTCDay() === 1 && agora.getUTCHours() < 15 && hist.resumo !== hoje;
+  if (!primeiraVez && (manual || semanal) && achados.length) {
+    const linhas = [manual ? '📊 <b>Preços de agora</b> (mais baratos por rota)' : '📊 <b>Resumo da semana</b>'];
     for (const rota of rotas) {
-      const top = achados.filter((c) => c.rota === rota).sort((a, b) => a.preco - b.preco).slice(0, 5);
+      const top = achados.filter((c) => c.rota === rota).sort((a, b) => a.preco - b.preco).slice(0, 3);
       if (!top.length) continue;
-      linhas.push(`\n<b>${esc(rota.nome)}</b>`);
+      linhas.push(`\n✈️ <b>${esc(rota.nome)}</b>`);
       for (const c of top) {
-        let l = `• ${nomeMes(c.mes)}: ${brl(c.preco)}`;
+        let l = `• <b>${brl(c.preco)}</b> em ${nomeMes(c.mes)}`;
         if (c.av.desconto !== null) l += ` (${c.av.desconto >= 0 ? '-' : '+'}${Math.abs(Math.round(c.av.desconto))}% vs média)`;
-        linhas.push(l);
+        linhas.push(l + `\n   ${detalhes(c.oferta)}\n   ${links(c.oferta, c.google && c.google.url)}`);
       }
     }
     blocos.push(linhas.join('\n'));
-    hist.resumo = hoje;
+    if (semanal) hist.resumo = hoje;
   }
 
   // limpeza: guarda no máximo 180 dias e descarta meses que já passaram

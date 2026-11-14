@@ -138,8 +138,8 @@
     <label for="aDesc">Avisar quando estiver quantos % abaixo da média</label>
     <input type="number" id="aDesc" inputmode="numeric" min="1" max="90">
 
-    <label for="aDias">Dias de coleta antes de confiar na média</label>
-    <input type="number" id="aDias" inputmode="numeric" min="1" max="60">
+    <label for="aDias">Dias que o robô coleta antes de calcular a média <small>(recomendado: 5, máximo 30)</small></label>
+    <input type="number" id="aDias" inputmode="numeric" min="1" max="30">
 
     <div class="erro" id="erroAjustes"></div>
     <div class="rodape">
@@ -188,6 +188,9 @@
     BUE:'Buenos Aires', BRC:'Bariloche', SCL:'Santiago', MVD:'Montevidéu', LIM:'Lima', BOG:'Bogotá', CTG:'Cartagena', ASU:'Assunção', TYO:'Tóquio', JNB:'Joanesburgo'
   };
   var MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  var CIAS = { G3:'Gol', LA:'LATAM', JJ:'LATAM', AD:'Azul', '2Z':'Voepass', TP:'TAP', AA:'American Airlines', UA:'United', DL:'Delta', AF:'Air France', KL:'KLM', IB:'Iberia', UX:'Air Europa',
+    LH:'Lufthansa', LX:'Swiss', BA:'British Airways', AZ:'ITA Airways', TK:'Turkish Airlines', EK:'Emirates', QR:'Qatar Airways', CM:'Copa Airlines', AV:'Avianca', AR:'Aerolíneas Argentinas',
+    H2:'Sky Airline', JA:'JetSMART', AC:'Air Canada', AM:'Aeroméxico', ET:'Ethiopian', AT:'Royal Air Maroc' };
 
   // ---------- estado ----------
   var arq = { config: {}, rotas: [] }, sha = null, hist = { precos: {}, ofertas: {} };
@@ -266,7 +269,7 @@
     var of = hist.ofertas[chave] || null;
     var preco = of && of.em === ult ? of.preco : serie[ult];
     var media = ant.length ? ant.reduce(function (a, b) { return a + b; }, 0) / ant.length : null;
-    var minDias = arq.config.dias_minimos_de_historico || 5;
+    var minDias = Math.max(1, Math.min(30, arq.config.dias_minimos_de_historico || 5));
     var desc = media && ant.length >= minDias ? (media - preco) / media * 100 : null;
     return { mes: chave.split('|')[1], preco: preco, media: media, n: ant.length, desc: desc, oferta: of, serie: serie, dias: ds, minDias: minDias };
   }
@@ -322,7 +325,9 @@
         var d = '';
         if (m.oferta && m.oferta.ida) {
           d = dataBR(m.oferta.ida) + (m.oferta.volta ? ' a ' + dataBR(m.oferta.volta) + ' (' + dias(m.oferta.ida, m.oferta.volta) + ' dias)' : '') +
-            (m.oferta.escalas === 0 ? ' · direto' : '') + (m.oferta.confirmado ? ' · confirmado no Google' : '') +
+            (m.oferta.cia ? ' · ' + esc(CIAS[m.oferta.cia] || 'cia ' + m.oferta.cia) : '') +
+            (m.oferta.escalas === 0 ? ' · direto' : m.oferta.escalas === 1 ? ' · 1 escala' : m.oferta.escalas > 1 ? ' · ' + m.oferta.escalas + ' escalas' : '') +
+            (m.oferta.confirmado ? ' · confirmado no Google' : '') +
             ' · <a href="' + esc(linkGoogle(m.oferta)) + '" target="_blank" rel="noopener">ver voos</a>';
         }
         return '<div class="mes"><div class="m">' + nomeMes(m.mes) + '</div><div>' + selo(m) + '</div><div class="v">' + brl(m.preco) + '</div>' +
@@ -397,7 +402,7 @@
   function abrirAjustes() {
     $('aToken').value = token;
     $('aDesc').value = arq.config.desconto_minimo_pct || 15;
-    $('aDias').value = arq.config.dias_minimos_de_historico || 5;
+    $('aDias').value = Math.max(1, Math.min(30, arq.config.dias_minimos_de_historico || 5));
     $('erroAjustes').textContent = '';
     $('dlgAjustes').classList.add('aberto');
   }
@@ -410,7 +415,7 @@
         try { if (token) localStorage.setItem('radar_token', token); else localStorage.removeItem('radar_token'); } catch (e) {}
         await carregarRotas(); await carregarHist();
       }
-      var d = parseInt($('aDesc').value, 10) || 15, n = parseInt($('aDias').value, 10) || 5;
+      var d = Math.max(1, Math.min(90, parseInt($('aDesc').value, 10) || 15)), n = Math.max(1, Math.min(30, parseInt($('aDias').value, 10) || 5));
       if (token && (d !== (arq.config.desconto_minimo_pct || 15) || n !== (arq.config.dias_minimos_de_historico || 5))) {
         arq.config.desconto_minimo_pct = d; arq.config.dias_minimos_de_historico = n;
         await salvarRotas('Atualiza ajustes');
