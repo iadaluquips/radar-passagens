@@ -220,10 +220,10 @@ async function main() {
 
   if (!rotas.length) {
     console.log('Nenhuma rota cadastrada ainda. Adicione rotas no painel.');
-    if (!hist.conectado) {
-      hist.conectado = true;
-      fs.writeFileSync(ARQ_HIST, JSON.stringify(hist, null, 1));
+    if (!hist.telegram_ok) {
       await enviarTelegram('🟢 <b>Radar de passagens conectado!</b>\nAgora adicione suas rotas no painel.');
+      hist.telegram_ok = true; // só marca depois que a mensagem realmente saiu
+      fs.writeFileSync(ARQ_HIST, JSON.stringify(hist, null, 1));
     }
     return;
   }
@@ -291,6 +291,8 @@ async function main() {
   }
 
   const blocos = [];
+  const desfazer = [];
+  const resumoAntes = hist.resumo;
   if (primeiraVez) {
     const linhas = ['🟢 <b>Radar de passagens ligado!</b>', 'Menor preço de hoje em cada rota:'];
     for (const rota of rotas) {
@@ -304,6 +306,7 @@ async function main() {
     blocos.push('🔥 <b>Oferta encontrada</b>');
     const porRota = new Map();
     for (const c of candidatos) {
+      desfazer.push([c.chave, hist.alertas[c.chave]]);
       hist.alertas[c.chave] = { preco: c.preco, data: hoje };
       const n = porRota.get(c.rota) || 0;
       porRota.set(c.rota, n + 1);
@@ -342,12 +345,24 @@ async function main() {
 
   // salva o histórico antes de avisar, para não perder a coleta se o Telegram falhar
   hist.iniciado = hist.iniciado || hoje;
-  hist.conectado = true;
   hist.atualizado = hoje;
   hist.atualizado_em = new Date().toISOString();
   fs.writeFileSync(ARQ_HIST, JSON.stringify(hist, null, 1));
 
-  if (blocos.length) await enviarTelegram(blocos.join('\n\n'));
+  if (blocos.length) {
+    try {
+      await enviarTelegram(blocos.join('\n\n'));
+      hist.telegram_ok = true;
+    } catch (e) {
+      // o aviso não saiu: desfaz as marcas para tentar de novo na próxima rodada
+      for (const [chave, antes] of desfazer) { if (antes) hist.alertas[chave] = antes; else delete hist.alertas[chave]; }
+      if (primeiraVez) delete hist.iniciado;
+      if (resumoAntes) hist.resumo = resumoAntes; else delete hist.resumo;
+      fs.writeFileSync(ARQ_HIST, JSON.stringify(hist, null, 1));
+      throw e;
+    }
+    fs.writeFileSync(ARQ_HIST, JSON.stringify(hist, null, 1));
+  }
   console.log(`\nFim: ${achados.length} preços coletados, ${candidatos.length} aviso(s) enviado(s).`);
 }
 
