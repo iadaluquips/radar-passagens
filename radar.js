@@ -210,34 +210,36 @@ async function enviarTelegram(texto) {
   }
 }
 
-function detalhes(of) {
-  const p = [of.volta ? `${dataBR(of.ida)} a ${dataBR(of.volta)} (${diasEntre(of.ida, of.volta)} dias)` : dataBR(of.ida)];
+function periodo(of) {
+  if (!of.volta) return dataBR(of.ida);
+  return `${dataBR(of.ida).slice(0, 5)} a ${dataBR(of.volta)} · ${diasEntre(of.ida, of.volta)} dias`;
+}
+function voo(of) {
+  const p = [];
   if (of.cia) p.push(nomeCia(of.cia));
-  p.push(of.escalas === 0 ? 'direto' : of.escalas === 1 ? '1 escala' : `${of.escalas} escalas`);
-  return p.map(esc).join(' · ');
+  p.push(of.escalas === 0 ? 'voo direto' : of.escalas === 1 ? '1 escala' : `${of.escalas} escalas`);
+  return p.join(' · ');
 }
-function links(of, urlGoogle) {
-  const l = [`<a href="${esc(urlGoogle || linkGoogle(of))}">Ver no Google Flights</a>`];
-  if (of.link) l.push(`<a href="${esc(of.link)}">Aviasales</a>`);
-  return l.join('  |  ');
-}
-
-function blocoOferta(c) {
+// cartão de uma oferta: caixa com preço, datas, companhia e situação do preço + link logo abaixo
+function cartao(c, opt = {}) {
   const of = c.oferta;
-  const linhas = [];
-  linhas.push(`✈️ <b>${esc(c.rota.nome)}</b>`);
-  linhas.push(`📅 ${detalhes(of)}`);
-  linhas.push(`💰 <b>${brl(c.preco)}</b>` + (c.av.nota !== null ? `  ·  nota ${c.av.nota}/100` : ''));
-  linhas.push('✅ ' + c.av.motivos.map(esc).join(' · '));
-  if (c.google) {
-    let g = `🔎 Confirmado agora no Google Flights: ${brl(c.google.preco)}`;
-    if (c.google.faixa) g += ` (faixa normal: ${brl(c.google.faixa[0])} a ${brl(c.google.faixa[1])})`;
-    linhas.push(g);
-  } else {
-    linhas.push('⚠️ Preço de cache (pode ter algumas horas). Confirme no link.');
+  const n = Math.max(1, Number(c.rota.passageiros) || 1);
+  const l = [];
+  l.push(`💰 <b>${brl(c.preco)}</b>` + (n > 1 ? ` por pessoa · cerca de ${brl(c.preco * n)} para ${n}` : ''));
+  l.push(`📅 ${esc(periodo(of))}`);
+  l.push(`🛫 ${esc(voo(of))}`);
+  if (c.av.desconto !== null) {
+    const d = Math.round(c.av.desconto);
+    l.push(d > 0 ? `📉 ${d}% abaixo da média (${brl(c.est.media)})` : d < 0 ? `📈 ${-d}% acima da média (${brl(c.est.media)})` : `➖ na média (${brl(c.est.media)})`);
   }
-  linhas.push('🔗 ' + links(of, c.google && c.google.url));
-  return linhas.join('\n');
+  if (opt.alerta) {
+    const extras = c.av.motivos.filter((m) => !/abaixo da média/.test(m));
+    if (c.av.nota !== null) extras.unshift(`nota ${c.av.nota}/100`);
+    if (extras.length) l.push('⭐ ' + esc(extras.join(' · ')));
+    l.push(c.google ? '✅ Preço confirmado agora no Google Flights' : '⚠️ Preço de algumas horas atrás, confira no link');
+  }
+  const url = (c.google && c.google.url) || linkGoogle(of);
+  return `<blockquote>${l.join('\n')}</blockquote>\n👉 <a href="${esc(url)}">Ver voos no Google Flights</a>`;
 }
 
 // ---------- principal ----------
@@ -372,30 +374,25 @@ async function main() {
   const desfazer = [];
   const resumoAntes = hist.resumo;
   if (primeiraVez) {
-    const linhas = ['🟢 <b>Radar de passagens ligado!</b>', 'Menor preço de hoje em cada rota:'];
+    blocos.push('🟢 <b>RADAR DE PASSAGENS LIGADO</b>\nMenor preço de hoje em cada rota:');
     for (const rota of rotas) {
       const m = achados.filter((c) => c.rota === rota).sort((a, b) => a.preco - b.preco)[0];
-      if (!m) { linhas.push(`\n✈️ <b>${esc(rota.nome)}</b>\nSem preço disponível ainda.`); continue; }
-      linhas.push(`\n✈️ <b>${esc(rota.nome)}</b>\n💰 <b>${brl(m.preco)}</b> em ${nomeMes(m.mes)}\n📅 ${detalhes(m.oferta)}\n🔗 ${links(m.oferta)}`);
+      blocos.push(m ? `✈️ <b>${esc(rota.nome)}</b> · ${nomeMes(m.mes)}\n${cartao(m)}` : `✈️ <b>${esc(rota.nome)}</b>\nSem preço disponível ainda.`);
     }
-    linhas.push(SERPAPI_KEY
-      ? '\nJá busquei no Google o histórico de preços dos meses mais baratos. Os outros meses ganham média nas próximas rodadas.'
-      : `\nA média fica pronta depois de ${cfg.dias_minimos_de_historico} dias de coleta. Até lá, aviso só pelo preço-alvo.`);
-    blocos.push(linhas.join('\n'));
   }
   if (candidatos.length) {
-    blocos.push('🔥 <b>Oferta encontrada</b>');
+    blocos.push('🔥 <b>OFERTA ENCONTRADA</b>');
     const porRota = new Map();
     for (const c of candidatos) {
       desfazer.push([c.chave, hist.alertas[c.chave]]);
       hist.alertas[c.chave] = { preco: c.preco, cache: c.oferta.preco, data: hoje };
       const n = porRota.get(c.rota) || 0;
       porRota.set(c.rota, n + 1);
-      if (n < cfg.max_avisos_por_rota) blocos.push(blocoOferta(c));
+      if (n < cfg.max_avisos_por_rota) blocos.push(`✈️ <b>${esc(c.rota.nome)}</b> · ${nomeMes(c.mes)}\n${cartao(c, { alerta: true })}`);
     }
     for (const [rota, n] of porRota) {
       const extra = n - cfg.max_avisos_por_rota;
-      if (extra > 0) blocos.push(`➕ ${esc(rota.nome)}: mais ${extra} mês(es) com preço baixo.`);
+      if (extra > 0) blocos.push(`➕ ${esc(rota.nome)}: mais ${extra} ${extra === 1 ? 'mês' : 'meses'} com preço baixo. Veja no painel.`);
     }
   }
 
@@ -404,18 +401,14 @@ async function main() {
   const manual = process.env.GITHUB_EVENT_NAME === 'workflow_dispatch';
   const semanal = agora.getUTCDay() === 1 && agora.getUTCHours() < 15 && hist.resumo !== hoje;
   if (!primeiraVez && (manual || semanal) && achados.length) {
-    const linhas = [manual ? '📊 <b>Preços de agora</b> (mais baratos por rota)' : '📊 <b>Resumo da semana</b>'];
+    blocos.push(manual ? '📊 <b>PREÇOS DE AGORA</b>' : '📊 <b>RESUMO DA SEMANA</b>');
+    const ordem = ['1º', '2º', '3º'];
     for (const rota of rotas) {
       const top = achados.filter((c) => c.rota === rota).sort((a, b) => a.preco - b.preco).slice(0, 3);
       if (!top.length) continue;
-      linhas.push(`\n✈️ <b>${esc(rota.nome)}</b>`);
-      for (const c of top) {
-        let l = `• <b>${brl(c.preco)}</b> em ${nomeMes(c.mes)}`;
-        if (c.av.desconto !== null) l += ` (${c.av.desconto >= 0 ? '-' : '+'}${Math.abs(Math.round(c.av.desconto))}% vs média)`;
-        linhas.push(l + `\n   ${detalhes(c.oferta)}\n   ${links(c.oferta, c.google && c.google.url)}`);
-      }
+      blocos.push(`✈️ <b>${esc(rota.nome)}</b>\nOs ${top.length === 1 ? 'mês mais barato' : top.length + ' meses mais baratos'}:`);
+      top.forEach((c, k) => blocos.push(`<b>${ordem[k]} · ${nomeMes(c.mes)}</b>\n${cartao(c)}`));
     }
-    blocos.push(linhas.join('\n'));
     if (semanal) hist.resumo = hoje;
   }
 

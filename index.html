@@ -114,7 +114,10 @@
       </div>
     </div>
 
-    <label for="fAlvo">Preço-alvo em R$ <small>(opcional — avisa sempre que ficar abaixo)</small></label>
+    <label for="fPax">Quantas pessoas vão viajar</label>
+    <input type="number" id="fPax" inputmode="numeric" min="1" max="9" placeholder="1">
+
+    <label for="fAlvo">Preço-alvo por pessoa em R$ <small>(opcional — avisa sempre que ficar abaixo)</small></label>
     <input type="number" id="fAlvo" inputmode="numeric" min="0" placeholder="Ex.: 3500">
 
     <label class="check"><input type="checkbox" id="fDireto"> Só voos diretos</label>
@@ -321,7 +324,7 @@
       var ms = Object.keys(hist.precos).filter(function (k) { return k.indexOf(pre) === 0; }).sort().map(resumoMes).filter(Boolean);
       var melhor = ms.slice().sort(function (a, b) { return a.preco - b.preco; })[0];
       var topo = melhor
-        ? '<div class="preco"><b>' + brl(melhor.preco) + '</b><small>melhor: ' + nomeMes(melhor.mes) + '</small></div>'
+        ? '<div class="preco"><b>' + brl(melhor.preco) + '</b><small>' + (r.passageiros > 1 ? 'por pessoa · ' : 'melhor: ') + nomeMes(melhor.mes) + '</small></div>'
         : '<div class="preco"><small>aguardando<br>a 1ª busca</small></div>';
       var linhas = ms.map(function (m) {
         var d = '';
@@ -340,6 +343,7 @@
       regras.push(Array.isArray(r.meses) && r.meses.length ? r.meses.map(nomeMes).join(', ') : 'próximos 12 meses');
       if (r.preco_alvo) regras.push('alvo ' + brl(r.preco_alvo));
       if (r.max_escalas === 0) regras.push('só direto');
+      if (r.passageiros > 1) regras.push(r.passageiros + ' pessoas');
       return '<section class="rota' + (abertas[i] ? ' aberta' : '') + '">' +
         '<div class="cab" data-acao="abrir" data-i="' + i + '"><div class="codigos">' + esc(r.origem) + '<span>→</span>' + esc(r.destino) + '</div>' + topo +
         '<div class="nome">' + esc(r.nome || '') + (melhor ? ' · ' + selo(melhor) : '') + '</div></div>' +
@@ -370,7 +374,7 @@
     quando = Array.isArray(r.meses) && r.meses.length ? 'meses' : 'prox';
     mesesSel = {}; (r.meses || []).forEach(function (m) { mesesSel[m] = true; });
     $('fMin').value = r.dias_min || (i >= 0 ? '' : 5); $('fMax').value = r.dias_max || (i >= 0 ? '' : 15);
-    $('fAlvo').value = r.preco_alvo || ''; $('fDireto').checked = r.max_escalas === 0;
+    $('fAlvo').value = r.preco_alvo || ''; $('fDireto').checked = r.max_escalas === 0; $('fPax').value = r.passageiros || 1;
     $('erroRota').textContent = '';
     marcarSeg('fTipo', tipo); marcarSeg('fQuando', quando); desenharMeses();
     $('dlgRota').classList.add('aberto');
@@ -389,6 +393,7 @@
     if (tipo === 'iv') { r.dias_min = min || 1; r.dias_max = max || 30; }
     var alvo = parseInt($('fAlvo').value, 10); if (alvo > 0) r.preco_alvo = alvo;
     if ($('fDireto').checked) r.max_escalas = 0;
+    var pax = Math.max(1, Math.min(9, parseInt($('fPax').value, 10) || 1)); if (pax > 1) r.passageiros = pax;
     var copia = JSON.stringify(arq.rotas);
     if (editando >= 0) arq.rotas[editando] = r; else arq.rotas.push(r);
     var b = $('btnSalvarRota'); b.disabled = true; b.textContent = 'Salvando…';
