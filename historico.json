@@ -1,7 +1,7 @@
 {
  "precos": {
   "FLN-RIO|2026-11": {
-   "2026-11-14": 1898,
+   "2026-11-14": 1873,
    "2026-09-15": 645,
    "2026-09-16": 748,
    "2026-09-17": 882,
@@ -335,7 +335,7 @@
  },
  "ofertas": {
   "FLN-RIO|2026-11": {
-   "preco": 1898,
+   "preco": 1873,
    "ida": "2026-11-21",
    "volta": "2026-12-01",
    "de": "FLN",
@@ -343,12 +343,8 @@
    "cia": "AD",
    "escalas": 1,
    "link": "https://www.aviasales.com/search/FLN2111RIO01121?t=AD17952597001795286400000445FLNCNFSDU17961039001796119200000255GIGVCPFLN_f21db7fd09030b70901635918ee2dc29_27375&search_date=13112026&expected_price_uuid=01a1d692-2852-8040-abcc-05db7788f595&static_fare_key=TY%7CP0%7CH1%7CL0%7CCH0%7CR0%7CTBC0&itinerary_key=u1WdRukY1bqebKMLMdZPHg&expected_price_source=share&expected_price_currency=brl&expected_price=1873",
-   "confirmado": true,
-   "em": "2026-11-14",
-   "faixa": [
-    790,
-    1750
-   ]
+   "confirmado": false,
+   "em": "2026-11-14"
   },
   "FLN-RIO|2026-12": {
    "preco": 1140,
@@ -403,7 +399,7 @@
  "telegram_ok": true,
  "iniciado": "2026-11-14",
  "atualizado": "2026-11-14",
- "atualizado_em": "2026-11-14T23:46:23.434Z",
+ "atualizado_em": "2026-11-14T23:56:35.317Z",
  "base": {},
  "semeado": {
   "FLN-RIO|2027-05": "2026-11-14",
