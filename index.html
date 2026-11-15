@@ -68,6 +68,13 @@
   .erro { color:var(--vermelho); font-size:13px; margin-top:10px; min-height:18px; }
   .rodape { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
   .dica { font-size:13px; color:var(--cinza); margin:6px 0 0; }
+  .fontes { background:var(--papel); border:1px solid var(--linha); border-radius:16px; padding:14px 16px; margin-top:18px; font-size:14px; }
+  .fontes h3 { margin:0 0 8px; font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(--cinza); }
+  .fonte { display:grid; grid-template-columns:22px 1fr; gap:2px 8px; padding:8px 0; border-top:1px solid #ece6d8; }
+  .fonte:first-of-type { border-top:0; }
+  .fonte b { grid-column:2; }
+  .fonte span { grid-column:2; color:var(--cinza); font-size:13px; }
+  .fonte i { font-style:normal; grid-row:1 / span 2; }
   #toast { position:fixed; left:50%; transform:translateX(-50%); bottom:84px; background:var(--tinta); color:#fff; padding:10px 16px; border-radius:10px; font-size:14px; opacity:0; transition:opacity .2s; pointer-events:none; z-index:20; max-width:90vw; text-align:center; }
   #toast.on { opacity:1; }
   @media (prefers-reduced-motion: reduce) { #toast { transition:none; } }
@@ -85,6 +92,7 @@
 <main>
   <div id="avisos"></div>
   <div id="lista"></div>
+  <div id="fontes"></div>
 </main>
 
 <button class="fab" id="btnNova">+ Adicionar rota</button>
@@ -186,6 +194,8 @@
     BSB:'Brasília', BHZ:'Belo Horizonte (todos)', CNF:'Belo Horizonte – Confins', SSA:'Salvador', REC:'Recife', FOR:'Fortaleza', NAT:'Natal', MCZ:'Maceió', AJU:'Aracaju', JPA:'João Pessoa',
     SLZ:'São Luís', THE:'Teresina', BEL:'Belém', MAO:'Manaus', CWB:'Curitiba', FLN:'Florianópolis', POA:'Porto Alegre', IGU:'Foz do Iguaçu', NVT:'Navegantes', JOI:'Joinville', VIX:'Vitória',
     GYN:'Goiânia', CGB:'Cuiabá', CGR:'Campo Grande', PMW:'Palmas', PVH:'Porto Velho', BPS:'Porto Seguro', FEN:'Fernando de Noronha', RAO:'Ribeirão Preto', UDI:'Uberlândia', LDB:'Londrina', MGF:'Maringá',
+    JJG:'Jaguaruna', CCM:'Criciúma', XAP:'Chapecó', CXJ:'Caxias do Sul', PFB:'Passo Fundo', CAC:'Cascavel', SJP:'São José do Rio Preto', IOS:'Ilhéus', PNZ:'Petrolina', JDO:'Juazeiro do Norte',
+    IMP:'Imperatriz', MCP:'Macapá', BVB:'Boa Vista', RBR:'Rio Branco', STM:'Santarém',
     LIS:'Lisboa', OPO:'Porto', MAD:'Madri', BCN:'Barcelona', PAR:'Paris', LON:'Londres', ROM:'Roma', MIL:'Milão', AMS:'Amsterdã', FRA:'Frankfurt', ZRH:'Zurique', IST:'Istambul', DXB:'Dubai',
     NYC:'Nova York', MIA:'Miami', MCO:'Orlando', FLL:'Fort Lauderdale', LAX:'Los Angeles', YTO:'Toronto', CUN:'Cancún', MEX:'Cidade do México', PUJ:'Punta Cana', PTY:'Cidade do Panamá',
     BUE:'Buenos Aires', BRC:'Bariloche', SCL:'Santiago', MVD:'Montevidéu', LIM:'Lima', BOG:'Bogotá', CTG:'Cartagena', ASU:'Assunção', TYO:'Tóquio', JNB:'Joanesburgo'
@@ -301,8 +311,29 @@
     return 'https://www.google.com/travel/flights?q=' + encodeURIComponent('Flights from ' + of.de + ' to ' + of.para + ' on ' + of.ida + (of.volta ? ' through ' + of.volta : '')) + '&curr=BRL';
   }
 
+  // ---------- fontes de dados ----------
+  function haQuanto(iso) {
+    var h = Math.round((Date.now() - Date.parse(iso)) / 36e5);
+    return h < 1 ? 'há menos de 1 hora' : h < 48 ? 'há ' + h + ' h' : 'há ' + Math.round(h / 24) + ' dias';
+  }
+  function desenharFontes() {
+    var st = hist.status || {}, tp = st.tp, g = st.google, gu = hist.google, linhas = [];
+    if (!tp) linhas.push(['⏳', 'Travelpayouts (preços do ano)', 'Ainda sem informação. Aparece depois da próxima busca.']);
+    else if (tp.ok) linhas.push(['✅', 'Travelpayouts (preços do ano)', 'Funcionando · ' + tp.precos + (tp.precos === 1 ? ' preço' : ' preços') + ' na última busca, ' + haQuanto(tp.em) + (tp.falhas ? ' · ' + tp.falhas + ' consulta(s) com erro' : '')]);
+    else linhas.push(['❌', 'Travelpayouts (preços do ano)', 'Com erro ' + haQuanto(tp.em) + ': ' + (tp.erro || 'sem resposta')]);
+    var uso = gu ? gu.usadas + ' de 250 buscas usadas em ' + nomeMes(gu.mes + '-01') : '';
+    if (g && g.configurado === false) linhas.push(['➖', 'Google Flights (SerpApi)', 'Chave não configurada. O radar funciona, mas sem média pronta nem confirmação.']);
+    else if (!g) linhas.push(['⏳', 'Google Flights (SerpApi)', uso || 'Ainda não foi consultado. Só é usado quando há rota nova ou oferta para confirmar.']);
+    else if (g.ok) linhas.push(['✅', 'Google Flights (SerpApi)', 'Funcionando · última consulta ' + haQuanto(g.em) + (uso ? ' · ' + uso : '')]);
+    else linhas.push(['❌', 'Google Flights (SerpApi)', 'Com erro ' + haQuanto(g.em) + ': ' + (g.erro || 'sem resposta') + (uso ? ' · ' + uso : '')]);
+    $('fontes').innerHTML = '<div class="fontes"><h3>Fontes de dados</h3>' + linhas.map(function (l) {
+      return '<div class="fonte"><i>' + l[0] + '</i><b>' + esc(l[1]) + '</b><span>' + esc(l[2]) + '</span></div>';
+    }).join('') + '</div>';
+  }
+
   // ---------- tela ----------
   function desenhar() {
+    desenharFontes();
     var av = '';
     if (!token) av += '<div class="aviso">Você está só visualizando. Para adicionar ou editar rotas, cole o código de acesso.<br><button class="btn p" data-acao="ajustes">Colar código de acesso</button></div>';
     $('avisos').innerHTML = av;
@@ -325,7 +356,7 @@
       var melhor = ms.slice().sort(function (a, b) { return a.preco - b.preco; })[0];
       var topo = melhor
         ? '<div class="preco"><b>' + brl(melhor.preco) + '</b><small>' + (r.passageiros > 1 ? 'por pessoa · ' : 'melhor: ') + nomeMes(melhor.mes) + '</small></div>'
-        : '<div class="preco"><small>aguardando<br>a 1ª busca</small></div>';
+        : '<div class="preco"><small>' + ((hist.vazio || {})[r.origem + '-' + r.destino] ? 'nenhum preço<br>encontrado' : 'aguardando<br>a 1ª busca') + '</small></div>';
       var linhas = ms.map(function (m) {
         var d = '';
         if (m.oferta && m.oferta.ida) {
@@ -350,14 +381,16 @@
         '<div class="picote"></div><div class="detalhe">' +
         (melhor ? grafico(melhor) : '') +
         '<div class="legenda">' + esc(regras.join(' · ')) + '</div>' +
-        (linhas || '<div class="legenda">Os preços aparecem aqui depois da próxima busca do robô (07:17 e 18:17), ou toque em Ajustes → Rodar agora.</div>') +
+        (linhas || '<div class="legenda">' + ((hist.vazio || {})[r.origem + '-' + r.destino]
+          ? 'O robô procurou e não achou preço para esta rota. Confira se os códigos ' + esc(r.origem) + ' e ' + esc(r.destino) + ' estão certos. Em aeroportos pequenos a base gratuita pode não ter dados; tente o aeroporto maior mais próximo.'
+          : 'Os preços aparecem aqui depois da próxima busca do robô (07:17 e 18:17), ou toque em Ajustes → Rodar agora.') + '</div>') +
         '<div class="acoes"><button class="btn" data-acao="editar" data-i="' + i + '">Editar</button><button class="btn perigo" data-acao="remover" data-i="' + i + '">Remover</button></div>' +
         '</div></section>';
     }).join('');
   }
 
   // ---------- formulário de rota ----------
-  var tipo = 'iv', quando = 'prox', mesesSel = {};
+  var tipo = 'iv', quando = 'prox', mesesSel = {}, avisado = '';
   function marcarSeg(id, v) { [].forEach.call($(id).children, function (b) { b.classList.toggle('on', b.dataset.v === v); }); }
   function desenharMeses() {
     $('fMeses').hidden = quando !== 'meses';
@@ -375,7 +408,7 @@
     mesesSel = {}; (r.meses || []).forEach(function (m) { mesesSel[m] = true; });
     $('fMin').value = r.dias_min || (i >= 0 ? '' : 5); $('fMax').value = r.dias_max || (i >= 0 ? '' : 15);
     $('fAlvo').value = r.preco_alvo || ''; $('fDireto').checked = r.max_escalas === 0; $('fPax').value = r.passageiros || 1;
-    $('erroRota').textContent = '';
+    $('erroRota').textContent = ''; avisado = '';
     marcarSeg('fTipo', tipo); marcarSeg('fQuando', quando); desenharMeses();
     $('dlgRota').classList.add('aberto');
   }
@@ -388,6 +421,12 @@
     else if (quando === 'meses' && !mm.length) erro = 'Escolha pelo menos um mês.';
     else if (tipo === 'iv' && min && max && min > max) erro = 'A duração mínima está maior que a máxima.';
     if (erro) { $('erroRota').textContent = erro; return; }
+    var estranhos = [de, para].filter(function (c) { return !LUGARES[c]; });
+    if (estranhos.length && avisado !== de + para) {
+      avisado = de + para;
+      $('erroRota').textContent = 'Não reconheço ' + estranhos.join(' e ') + '. Confira se é o código certo do aeroporto. Se estiver certo, toque em Salvar de novo.';
+      return;
+    }
     var r = { nome: lugar(de) + ' → ' + lugar(para), origem: de, destino: para, ida_e_volta: tipo === 'iv' };
     if (quando === 'meses') r.meses = mm; else r.proximos_meses = 11;
     if (tipo === 'iv') { r.dias_min = min || 1; r.dias_max = max || 30; }

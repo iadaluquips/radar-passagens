@@ -258,6 +258,9 @@ async function main() {
   hist.base = hist.base || {};
   hist.semeado = hist.semeado || {};
   hist.descartado = hist.descartado || {};
+  hist.status = hist.status || {};
+  hist.vazio = hist.vazio || {};
+  if (!SERPAPI_KEY) hist.status.google = { configurado: false };
 
   if (!rotas.length) {
     console.log('Nenhuma rota cadastrada ainda. Adicione rotas no painel.');
@@ -274,6 +277,7 @@ async function main() {
   const achados = [];
   let consultas = 0;
   let falhas = 0;
+  let ultimoErroTP = '';
 
   for (const rota of rotas) {
     rota.nome = rota.nome || `${rota.origem} → ${rota.destino}`;
@@ -284,6 +288,7 @@ async function main() {
         oferta = await melhorDoMes(rota, mes);
       } catch (e) {
         falhas++;
+        ultimoErroTP = e.message;
         console.log(`Erro em ${rota.nome} ${mes}: ${e.message}`);
         continue;
       }
@@ -301,7 +306,16 @@ async function main() {
     }
   }
 
-  if (consultas && falhas === consultas) throw new Error('Todas as consultas falharam. Confira o token da Travelpayouts.');
+  // situação das fontes, para o painel mostrar
+  hist.status.tp = { em: new Date().toISOString(), ok: !(consultas && falhas === consultas), consultas, falhas, precos: achados.length, erro: ultimoErroTP };
+  for (const rota of rotas) {
+    const k = `${rota.origem}-${rota.destino}`;
+    if (achados.some((c) => c.rota === rota)) delete hist.vazio[k]; else hist.vazio[k] = hoje;
+  }
+  if (consultas && falhas === consultas) {
+    fs.writeFileSync(ARQ_HIST, JSON.stringify(hist, null, 1));
+    throw new Error('Todas as consultas falharam. Confira o token da Travelpayouts.');
+  }
 
   // média pronta: para meses ainda sem histórico, pega o histórico de preços do Google (uma vez por mês de viagem)
   const semMedia = achados
@@ -314,6 +328,7 @@ async function main() {
       hist.google.usadas++;
       const g = await confirmarGoogle(c.oferta);
       hist.semeado[c.chave] = hoje;
+      hist.status.google = { em: new Date().toISOString(), ok: true };
       if (!g) continue;
       const serie = hist.precos[c.chave];
       let pontos = 0;
@@ -329,6 +344,7 @@ async function main() {
       c.av = avaliar(c.preco, c.est, c.rota, cfg);
       console.log(`${c.rota.nome} ${c.mes}: média do Google carregada (${pontos} dias de histórico` + (c.est.media ? `, média ${brl(c.est.media)})` : ')'));
     } catch (e) {
+      hist.status.google = { em: new Date().toISOString(), ok: false, erro: e.message };
       console.log(`Não consegui a média do Google (${c.rota.nome} ${c.mes}): ${e.message}`);
     }
   }
@@ -351,12 +367,14 @@ async function main() {
       try {
         hist.google.usadas++;
         const g = await confirmarGoogle(c.oferta);
+        hist.status.google = { em: new Date().toISOString(), ok: true };
         if (!g) continue;
         c.google = g;
         c.preco = g.preco;
         Object.assign(hist.ofertas[c.chave], { preco: g.preco, confirmado: true, faixa: g.faixa });
         c.av = avaliar(g.preco, c.est, c.rota, cfg);
       } catch (e) {
+        hist.status.google = { em: new Date().toISOString(), ok: false, erro: e.message };
         console.log(`Não consegui confirmar no Google (${c.rota.nome} ${c.mes}): ${e.message}`);
       }
     }
