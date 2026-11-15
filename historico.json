@@ -496,7 +496,7 @@
  "telegram_ok": true,
  "iniciado": "2026-11-14",
  "atualizado": "2026-11-15",
- "atualizado_em": "2026-11-15T10:52:40.788Z",
+ "atualizado_em": "2026-11-15T14:52:50.158Z",
  "base": {},
  "semeado": {
   "FLN-RIO|2027-05": "2026-11-14",
@@ -511,5 +511,18 @@
  "google": {
   "mes": "2026-11",
   "usadas": 7
+ },
+ "status": {
+  "tp": {
+   "em": "2026-11-15T14:52:50.157Z",
+   "ok": true,
+   "consultas": 24,
+   "falhas": 0,
+   "precos": 5,
+   "erro": ""
+  }
+ },
+ "vazio": {
+  "JJG-MCZ": "2026-11-15"
  }
 }
