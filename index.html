@@ -8,6 +8,7 @@
 <style>
   :root { --tinta:#14213d; --fundo:#f3efe6; --papel:#fffdf8; --linha:#ddd5c3; --ambar:#f59e0b; --verde:#1f8a70; --vermelho:#b4432f; --cinza:#6b7280; }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body { margin:0; background:var(--fundo); color:var(--tinta); font:16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   button, input, select { font: inherit; color: inherit; }
   header { background:var(--tinta); color:#fff; padding:18px 16px 22px; }
@@ -68,6 +69,12 @@
   .erro { color:var(--vermelho); font-size:13px; margin-top:10px; min-height:18px; }
   .rodape { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
   .dica { font-size:13px; color:var(--cinza); margin:6px 0 0; }
+  .sug { display:none; border:1px solid var(--linha); border-radius:10px; background:#fff; margin-top:4px; overflow:hidden; }
+  .sug.on { display:block; }
+  .sug button { display:grid; grid-template-columns:1fr auto; gap:2px 10px; width:100%; text-align:left; border:0; border-top:1px solid #f0ebde; background:none; padding:10px 12px; font-size:14px; }
+  .sug button:first-child { border-top:0; }
+  .sug button small { grid-column:1; color:var(--cinza); font-size:12px; }
+  .sug button code { grid-row:1 / span 2; grid-column:2; align-self:center; font:700 13px ui-monospace, Menlo, Consolas, monospace; color:var(--cinza); }
   .fontes { background:var(--papel); border:1px solid var(--linha); border-radius:16px; padding:14px 16px; margin-top:18px; font-size:14px; }
   .fontes h3 { margin:0 0 8px; font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(--cinza); }
   .fonte { display:grid; grid-template-columns:22px 1fr; gap:2px 8px; padding:8px 0; border-top:1px solid #ece6d8; }
@@ -101,11 +108,13 @@
 <div class="fundo" id="dlgRota">
   <div class="folha">
     <h2 id="tituloRota">Nova rota</h2>
-    <div class="dupla">
-      <div><label for="fDe">De</label><input type="text" id="fDe" list="aeroportos" placeholder="Ex.: SAO" autocomplete="off"></div>
-      <div><label for="fPara">Para</label><input type="text" id="fPara" list="aeroportos" placeholder="Ex.: LIS" autocomplete="off"></div>
-    </div>
-    <p class="dica">Escolha na lista ou digite o código de 3 letras do aeroporto ou da cidade.</p>
+    <label for="fDe">De</label>
+    <input type="text" id="fDe" placeholder="Cidade ou aeroporto. Ex.: Rio de Janeiro" autocomplete="off">
+    <div class="sug" id="sDe"></div>
+    <label for="fPara">Para</label>
+    <input type="text" id="fPara" placeholder="Cidade, aeroporto ou país. Ex.: China" autocomplete="off">
+    <div class="sug" id="sPara"></div>
+    <p class="dica" id="dicaLugar">Digite o nome e escolha na lista. A cidade pega todos os aeroportos dela; o país pega todos os aeroportos do país.</p>
 
     <label>Tipo de viagem</label>
     <div class="seg" id="fTipo"><button data-v="iv" class="on">Ida e volta</button><button data-v="ida">Só ida</button></div>
@@ -172,7 +181,6 @@
   </div>
 </div>
 
-<datalist id="aeroportos"></datalist>
 <div id="toast"></div>
 
 <script>
@@ -226,7 +234,90 @@
   function b64(str) { var b = new TextEncoder().encode(str), s = ''; for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s); }
   function deB64(b) { var s = atob(b.replace(/\s/g, '')), a = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return new TextDecoder().decode(a); }
   function codigo(v) { var m = String(v || '').trim().toUpperCase().match(/^[A-Z]{3}/); return m ? m[0] : ''; }
-  function lugar(c) { return (LUGARES[c] || c).replace(/ \(todos\)| – .*/, ''); }
+
+  // ---------- lugares do mundo (cidades, aeroportos e países) ----------
+  var PT = { SHA:'Xangai', BJS:'Pequim', CAN:'Cantão (Guangzhou)', HKG:'Hong Kong', TYO:'Tóquio', OSA:'Osaka', SEL:'Seul', BKK:'Bangcoc', SIN:'Singapura', DEL:'Nova Délhi', BOM:'Mumbai', DXB:'Dubai', DOH:'Doha',
+    IST:'Istambul', TLV:'Tel Aviv', CAI:'Cairo', JNB:'Joanesburgo', CPT:'Cidade do Cabo', SYD:'Sydney', MEL:'Melbourne', AKL:'Auckland',
+    LON:'Londres', PAR:'Paris', ROM:'Roma', MIL:'Milão', VCE:'Veneza', FLR:'Florença', NAP:'Nápoles', TRN:'Turim', MAD:'Madri', BCN:'Barcelona', SVQ:'Sevilha', LIS:'Lisboa', OPO:'Porto',
+    AMS:'Amsterdã', BRU:'Bruxelas', FRA:'Frankfurt', MUC:'Munique', BER:'Berlim', HAM:'Hamburgo', CGN:'Colônia', VIE:'Viena', ZRH:'Zurique', GVA:'Genebra', PRG:'Praga', WAW:'Varsóvia', BUD:'Budapeste',
+    ATH:'Atenas', CPH:'Copenhague', STO:'Estocolmo', OSL:'Oslo', HEL:'Helsinque', DUB:'Dublin', EDI:'Edimburgo', MOW:'Moscou',
+    NYC:'Nova York', MIA:'Miami', ORL:'Orlando', LAX:'Los Angeles', SFO:'São Francisco', CHI:'Chicago', WAS:'Washington', BOS:'Boston', LAS:'Las Vegas', YTO:'Toronto', YMQ:'Montreal', YVR:'Vancouver',
+    MEX:'Cidade do México', CUN:'Cancún', HAV:'Havana', PUJ:'Punta Cana', PTY:'Cidade do Panamá', BOG:'Bogotá', CTG:'Cartagena', LIM:'Lima', CUZ:'Cusco', SCL:'Santiago', BUE:'Buenos Aires', BRC:'Bariloche',
+    MVD:'Montevidéu', ASU:'Assunção', SAO:'São Paulo', RIO:'Rio de Janeiro', BHZ:'Belo Horizonte', BSB:'Brasília' };
+  var lugares = [], porCodigo = {}, geoCarregado = false, nomesPais = null;
+  try { nomesPais = new Intl.DisplayNames(['pt-BR'], { type: 'region' }); } catch (e) {}
+  function semAcento(t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+  function nomePais(c) { var n = c; try { if (nomesPais && c) n = nomesPais.of(c) || c; } catch (e) {} return n; }
+  function montarLugares(geo) {
+    lugares = []; porCodigo = {};
+    function add(o) { o.busca = semAcento(o.nome + ' ' + (o.extra || '') + ' ' + o.codigo); lugares.push(o); if (!porCodigo[o.codigo] || o.tipo === 'cidade') porCodigo[o.codigo] = o; }
+    if (geo && geo.cidades) {
+      var paises = {}, nomeCidade = {};
+      geo.cidades.forEach(function (c) { nomeCidade[c[0]] = PT[c[0]] || c[1]; if (c[2]) paises[c[2]] = 1; });
+      Object.keys(paises).forEach(function (p) { add({ codigo: p, nome: nomePais(p), tipo: 'pais', sub: 'País inteiro · todos os aeroportos' }); });
+      geo.cidades.forEach(function (c) { add({ codigo: c[0], nome: PT[c[0]] || c[1], extra: c[1], tipo: 'cidade', sub: 'Cidade · todos os aeroportos · ' + nomePais(c[2]), pais: c[2] }); });
+      geo.aeroportos.forEach(function (a) {
+        if (a[0] === a[2] && a[1] === nomeCidade[a[2]]) return; // repetição exata da cidade
+        add({ codigo: a[0], nome: a[1], extra: nomeCidade[a[2]] || '', tipo: 'aeroporto', sub: 'Aeroporto' + (nomeCidade[a[2]] ? ' · ' + nomeCidade[a[2]] : '') + ' · ' + nomePais(a[3]), pais: a[3] });
+      });
+      geoCarregado = true;
+    } else {
+      Object.keys(LUGARES).forEach(function (c) { add({ codigo: c, nome: LUGARES[c].replace(/ \(todos\)/, ''), tipo: 'cidade', sub: 'Cidade ou aeroporto' }); });
+      Object.keys(PT).forEach(function (c) { if (!porCodigo[c]) add({ codigo: c, nome: PT[c], tipo: 'cidade', sub: 'Cidade · todos os aeroportos' }); });
+    }
+  }
+  function lugar(c) { var o = porCodigo[c]; return o ? o.nome : (LUGARES[c] || c).replace(/ \(todos\)| – .*/, ''); }
+  function sugerir(texto, aceitaPais) {
+    var q = semAcento(texto).trim(); if (q.length < 2) return [];
+    var cod = q.toUpperCase(), out = [];
+    for (var i = 0; i < lugares.length; i++) {
+      var o = lugares[i]; if (o.tipo === 'pais' && !aceitaPais) continue;
+      var n = semAcento(o.nome), pos = o.busca.indexOf(q); if (pos < 0) continue;
+      var nota = o.codigo === cod ? 0 : n === q ? 1 : n.indexOf(q) === 0 ? 2 : 4;
+      nota += o.tipo === 'pais' ? 0 : o.tipo === 'cidade' ? 0.2 : 0.5;
+      out.push([nota, o]);
+    }
+    out.sort(function (a, b) { return a[0] - b[0] || a[1].nome.length - b[1].nome.length; });
+    return out.slice(0, 7).map(function (x) { return x[1]; });
+  }
+  function ligarCampo(idCampo, idSug, aceitaPais) {
+    var campo = $(idCampo), cx = $(idSug);
+    function fechar() { cx.classList.remove('on'); cx.innerHTML = ''; }
+    campo.addEventListener('input', function () {
+      delete campo.dataset.codigo; delete campo.dataset.tipo;
+      var lista = sugerir(campo.value, aceitaPais);
+      if (!lista.length) { fechar(); return; }
+      cx.innerHTML = lista.map(function (o) {
+        return '<button type="button" data-c="' + esc(o.codigo) + '" data-t="' + o.tipo + '">' + (o.tipo === 'pais' ? '🌍 ' : o.tipo === 'cidade' ? '🏙️ ' : '✈️ ') + esc(o.nome) + '<code>' + esc(o.codigo) + '</code><small>' + esc(o.sub) + '</small></button>';
+      }).join('');
+      cx.classList.add('on');
+    });
+    cx.addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      escolher(campo, b.dataset.c, b.dataset.t); fechar(); $('erroRota').textContent = '';
+    });
+    campo.fechar = fechar;
+  }
+  function escolher(campo, cod, tipo) {
+    campo.dataset.codigo = cod; campo.dataset.tipo = tipo;
+    var o = null; for (var i = 0; i < lugares.length; i++) if (lugares[i].codigo === cod && lugares[i].tipo === tipo) { o = lugares[i]; break; }
+    campo.value = (o ? o.nome : cod) + (tipo === 'pais' ? ' (país inteiro)' : ' (' + cod + ')');
+  }
+  function lerCampo(campo) {
+    if (campo.dataset.codigo) return { codigo: campo.dataset.codigo, tipo: campo.dataset.tipo };
+    var c = codigo(campo.value);
+    if (c && String(campo.value).trim().length <= 3) return { codigo: c, tipo: (porCodigo[c] || {}).tipo || 'cidade', digitado: true };
+    var lista = sugerir(campo.value, true), q = semAcento(campo.value).trim();
+    if (lista.length && semAcento(lista[0].nome) === q) return { codigo: lista[0].codigo, tipo: lista[0].tipo };
+    return c && /^[A-Za-z]{3}\b/.test(String(campo.value).trim()) ? { codigo: c, tipo: 'cidade', digitado: true } : null;
+  }
+  async function carregarGeo() {
+    try {
+      var r = await fetch(RAW + 'aeroportos.json?t=' + new Date().toISOString().slice(0, 10), { cache: 'force-cache' });
+      if (r.ok) { montarLugares(await r.json()); return; }
+    } catch (e) {}
+    montarLugares(null);
+  }
 
   // ---------- GitHub ----------
   function gh(caminho, opt) {
@@ -360,7 +451,7 @@
       var linhas = ms.map(function (m) {
         var d = '';
         if (m.oferta && m.oferta.ida) {
-          d = dataBR(m.oferta.ida) + (m.oferta.volta ? ' a ' + dataBR(m.oferta.volta) + ' (' + dias(m.oferta.ida, m.oferta.volta) + ' dias)' : '') +
+          d = (m.oferta.cidade ? '<b>' + esc(PT[m.oferta.cidadeCod] || m.oferta.cidade) + ' (' + esc(m.oferta.para) + ')</b> · ' : '') + dataBR(m.oferta.ida) + (m.oferta.volta ? ' a ' + dataBR(m.oferta.volta) + ' (' + dias(m.oferta.ida, m.oferta.volta) + ' dias)' : '') +
             (m.oferta.cia ? ' · ' + esc(CIAS[m.oferta.cia] || 'cia ' + m.oferta.cia) : '') +
             (m.oferta.escalas === 0 ? ' · direto' : m.oferta.escalas === 1 ? ' · 1 escala' : m.oferta.escalas > 1 ? ' · ' + m.oferta.escalas + ' escalas' : '') +
             (m.oferta.confirmado ? ' · confirmado no Google' : '') +
@@ -373,6 +464,7 @@
       if (r.ida_e_volta !== false && (r.dias_min || r.dias_max)) regras.push((r.dias_min || 1) + ' a ' + (r.dias_max || 60) + ' dias');
       regras.push(Array.isArray(r.meses) && r.meses.length ? r.meses.map(nomeMes).join(', ') : 'próximos 12 meses');
       if (r.preco_alvo) regras.push('alvo ' + brl(r.preco_alvo));
+      if (r.destino_pais) regras.push('qualquer aeroporto do país');
       if (r.max_escalas === 0) regras.push('só direto');
       if (r.passageiros > 1) regras.push(r.passageiros + ' pessoas');
       return '<section class="rota' + (abertas[i] ? ' aberta' : '') + '">' +
@@ -402,7 +494,12 @@
     editando = i;
     var r = i >= 0 ? arq.rotas[i] : {};
     $('tituloRota').textContent = i >= 0 ? 'Editar rota' : 'Nova rota';
-    $('fDe').value = r.origem || ''; $('fPara').value = r.destino || '';
+    ['fDe', 'fPara'].forEach(function (id) { $(id).value = ''; delete $(id).dataset.codigo; delete $(id).dataset.tipo; if ($(id).fechar) $(id).fechar(); });
+    if (r.origem) escolher($('fDe'), r.origem, (porCodigo[r.origem] || {}).tipo === 'aeroporto' ? 'aeroporto' : 'cidade');
+    if (r.destino) escolher($('fPara'), r.destino, r.destino_pais ? 'pais' : (porCodigo[r.destino] || {}).tipo === 'aeroporto' ? 'aeroporto' : 'cidade');
+    $('dicaLugar').textContent = geoCarregado
+      ? 'Digite o nome e escolha na lista. A cidade pega todos os aeroportos dela; o país pega todos os aeroportos do país.'
+      : 'A lista mundial ainda não foi baixada pelo robô (acontece na próxima busca). Por enquanto, digite o nome de uma cidade conhecida ou o código de 3 letras.';
     tipo = r.ida_e_volta === false ? 'ida' : 'iv';
     quando = Array.isArray(r.meses) && r.meses.length ? 'meses' : 'prox';
     mesesSel = {}; (r.meses || []).forEach(function (m) { mesesSel[m] = true; });
@@ -413,21 +510,24 @@
     $('dlgRota').classList.add('aberto');
   }
   async function salvarRota() {
-    var de = codigo($('fDe').value), para = codigo($('fPara').value), erro = '';
+    var lDe = lerCampo($('fDe')), lPara = lerCampo($('fPara')), erro = '';
+    var de = lDe ? lDe.codigo : '', para = lPara ? lPara.codigo : '';
     var mm = Object.keys(mesesSel).filter(function (m) { return mesesSel[m]; }).sort();
     var min = parseInt($('fMin').value, 10) || 0, max = parseInt($('fMax').value, 10) || 0;
-    if (!de || !para) erro = 'Preencha origem e destino com o código de 3 letras.';
+    if (!de || !para) erro = 'Escolha a origem e o destino na lista de sugestões (ou digite o código de 3 letras).';
+    else if (lDe.tipo === 'pais') erro = 'A origem precisa ser uma cidade ou um aeroporto. País inteiro só vale no destino.';
     else if (de === para) erro = 'Origem e destino precisam ser diferentes.';
     else if (quando === 'meses' && !mm.length) erro = 'Escolha pelo menos um mês.';
     else if (tipo === 'iv' && min && max && min > max) erro = 'A duração mínima está maior que a máxima.';
     if (erro) { $('erroRota').textContent = erro; return; }
-    var estranhos = [de, para].filter(function (c) { return !LUGARES[c]; });
+    var estranhos = [de, para].filter(function (c) { return !porCodigo[c] && !LUGARES[c]; });
     if (estranhos.length && avisado !== de + para) {
       avisado = de + para;
       $('erroRota').textContent = 'Não reconheço ' + estranhos.join(' e ') + '. Confira se é o código certo do aeroporto. Se estiver certo, toque em Salvar de novo.';
       return;
     }
-    var r = { nome: lugar(de) + ' → ' + lugar(para), origem: de, destino: para, ida_e_volta: tipo === 'iv' };
+    var r = { nome: lugar(de) + ' → ' + (lPara.tipo === 'pais' ? nomePais(para) : lugar(para)), origem: de, destino: para, ida_e_volta: tipo === 'iv' };
+    if (lPara.tipo === 'pais') r.destino_pais = true;
     if (quando === 'meses') r.meses = mm; else r.proximos_meses = 11;
     if (tipo === 'iv') { r.dias_min = min || 1; r.dias_max = max || 30; }
     var alvo = parseInt($('fAlvo').value, 10); if (alvo > 0) r.preco_alvo = alvo;
@@ -521,10 +621,14 @@
   $('fMeses').onclick = function (e) { var m = e.target.dataset.m; if (m) { mesesSel[m] = !mesesSel[m]; e.target.classList.toggle('on', mesesSel[m]); $('erroRota').textContent = ''; } };
   [].forEach.call(document.querySelectorAll('.fundo'), function (f) { f.addEventListener('click', function (e) { if (e.target === f) f.classList.remove('aberto'); }); });
 
-  $('aeroportos').innerHTML = Object.keys(LUGARES).map(function (c) { return '<option value="' + c + ' — ' + esc(LUGARES[c]) + '">'; }).join('');
+
+  ligarCampo('fDe', 'sDe', false);
+  ligarCampo('fPara', 'sPara', true);
+  montarLugares(null);
 
   // ---------- início ----------
   (async function () {
+    carregarGeo();
     try { await carregarRotas(); await carregarHist(); }
     catch (e) { desenhar(); $('status').textContent = 'Não consegui carregar'; $('avisos').insertAdjacentHTML('afterbegin', '<div class="aviso">' + esc(e.message) + '</div>'); return; }
     desenhar();

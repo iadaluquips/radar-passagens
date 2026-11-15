@@ -8,6 +8,7 @@ const path = require('path');
 const DIR = process.env.RADAR_DIR || __dirname;
 const ARQ_ROTAS = path.join(DIR, 'rotas.json');
 const ARQ_HIST = path.join(DIR, 'historico.json');
+const ARQ_AERO = path.join(DIR, 'aeroportos.json');
 
 const TP_TOKEN = process.env.TRAVELPAYOUTS_TOKEN || '';
 const SERPAPI_KEY = process.env.SERPAPI_KEY || '';
@@ -59,14 +60,57 @@ function mesesDaRota(rota, hoje) {
   return lista.filter((m) => m >= atual);
 }
 
+// ---------- lista mundial de cidades e aeroportos ----------
+async function baixarLista(nome) {
+  for (const lingua of ['pt', 'en']) {
+    try {
+      const r = await fetch(`https://api.travelpayouts.com/data/${lingua}/${nome}.json`, { headers: { 'X-Access-Token': TP_TOKEN } });
+      if (!r.ok) continue;
+      const j = await r.json();
+      if (Array.isArray(j) && j.length > 50) return j;
+    } catch (e) { /* tenta a próxima língua */ }
+  }
+  return null;
+}
+
+async function carregarGeo(hoje) {
+  let geo = null;
+  try { geo = JSON.parse(fs.readFileSync(ARQ_AERO, 'utf8')); } catch (e) { geo = null; }
+  const velho = !geo || !geo.em || diasEntre(geo.em, hoje) > 30;
+  if (velho) {
+    const [cid, aer] = [await baixarLista('cities'), await baixarLista('airports')];
+    if (cid && aer) {
+      const nomeDe = (x) => x.name || (x.name_translations && x.name_translations.en) || '';
+      const cidades = cid.filter((c) => c.code && nomeDe(c) && c.has_flightable_airport !== false).map((c) => [c.code, nomeDe(c), c.country_code || '']);
+      const temCidade = new Set(cidades.map((c) => c[0]));
+      const aeroportos = aer
+        .filter((a) => a.code && nomeDe(a) && (a.iata_type || 'airport') === 'airport' && a.flightable !== false)
+        .map((a) => [a.code, nomeDe(a), temCidade.has(a.city_code) ? a.city_code : '', a.country_code || '']);
+      geo = { em: hoje, cidades, aeroportos };
+      fs.writeFileSync(ARQ_AERO, JSON.stringify(geo));
+      try { require('child_process').execSync('git add aeroportos.json', { cwd: DIR, stdio: 'ignore' }); } catch (e) { /* fora do GitHub: ignora */ }
+      console.log(`Lista mundial atualizada: ${cidades.length} cidades e ${aeroportos.length} aeroportos.`);
+    } else {
+      console.log('Não consegui baixar a lista mundial de aeroportos agora' + (geo ? '; uso a que já tenho.' : '.'));
+    }
+  }
+  const pais = {}, nome = {};
+  if (geo) {
+    for (const [c, n, p] of geo.cidades) { pais[c] = p; nome[c] = n; }
+    for (const [c, n, cid, p] of geo.aeroportos) { if (!pais[c]) pais[c] = p; if (!nome[c]) nome[c] = n; }
+  }
+  return { ok: !!geo, pais, nome };
+}
+
 // ---------- Travelpayouts ----------
 async function buscarTP(origem, destino, mesIda, mesVolta) {
   const u = new URL('https://api.travelpayouts.com/aviasales/v3/prices_for_dates');
   const p = {
-    origin: origem, destination: destino, departure_at: mesIda,
+    origin: origem, departure_at: mesIda,
     one_way: mesVolta ? 'false' : 'true', direct: 'false', unique: 'false',
     sorting: 'price', currency: 'brl', limit: '1000', page: '1'
   };
+  if (destino) p.destination = destino;
   if (mesVolta) p.return_at = mesVolta;
   for (const k in p) u.searchParams.set(k, p[k]);
   const r = await fetch(u, { headers: { 'X-Access-Token': TP_TOKEN } });
@@ -76,12 +120,14 @@ async function buscarTP(origem, destino, mesIda, mesVolta) {
   return j.data || [];
 }
 
-async function melhorDoMes(rota, mes) {
+async function melhorDoMes(rota, mes, geo) {
   const idaVolta = rota.ida_e_volta !== false;
+  const porPais = !!rota.destino_pais;               // destino é um país inteiro (ex.: CN)
+  const destino = porPais ? null : rota.destino;
   let ofertas = [];
   if (idaVolta) {
     for (const mv of [mes, somaMes(mes, 1)]) {
-      ofertas = ofertas.concat(await buscarTP(rota.origem, rota.destino, mes, mv));
+      ofertas = ofertas.concat(await buscarTP(rota.origem, destino, mes, mv));
       await esperar(250);
     }
     const min = rota.dias_min ?? 1;
@@ -92,8 +138,11 @@ async function melhorDoMes(rota, mes) {
       return d >= min && d <= max;
     });
   } else {
-    ofertas = await buscarTP(rota.origem, rota.destino, mes, null);
+    ofertas = await buscarTP(rota.origem, destino, mes, null);
     await esperar(250);
+  }
+  if (porPais) {
+    ofertas = ofertas.filter((o) => geo.pais[o.destination] === rota.destino || geo.pais[o.destination_airport] === rota.destino);
   }
   if (rota.max_escalas != null) {
     ofertas = ofertas.filter((o) => (o.transfers ?? 0) <= rota.max_escalas && (o.return_transfers ?? 0) <= rota.max_escalas);
@@ -108,7 +157,8 @@ async function melhorDoMes(rota, mes) {
     ida: o.departure_at.slice(0, 10),
     volta: o.return_at ? o.return_at.slice(0, 10) : null,
     aeroOrigem: o.origin_airport || rota.origem,
-    aeroDestino: o.destination_airport || rota.destino,
+    aeroDestino: o.destination_airport || o.destination || rota.destino,
+    cidade: porPais ? (geo.nome[o.destination] || geo.nome[o.destination_airport] || o.destination || '') : '',
     cia: o.airline || '',
     escalas: o.transfers ?? 0,
     link: o.link ? 'https://www.aviasales.com' + o.link : null
@@ -226,6 +276,7 @@ function cartao(c, opt = {}) {
   const n = Math.max(1, Number(c.rota.passageiros) || 1);
   const l = [];
   l.push(`💰 <b>${brl(c.preco)}</b>` + (n > 1 ? ` por pessoa · cerca de ${brl(c.preco * n)} para ${n}` : ''));
+  if (of.cidade) l.push(`📍 ${esc(of.cidade)} (${esc(of.aeroDestino)})`);
   l.push(`📅 ${esc(periodo(of))}`);
   l.push(`🛫 ${esc(voo(of))}`);
   if (c.av.desconto !== null) {
@@ -274,6 +325,7 @@ async function main() {
   const primeiraVez = !hist.iniciado;
   const hoje = hojeSP();
 
+  const geo = await carregarGeo(hoje);
   const achados = [];
   let consultas = 0;
   let falhas = 0;
@@ -281,11 +333,12 @@ async function main() {
 
   for (const rota of rotas) {
     rota.nome = rota.nome || `${rota.origem} → ${rota.destino}`;
+    if (rota.destino_pais && !geo.ok) { console.log(`${rota.nome}: sem a lista de aeroportos ainda, tento na próxima rodada.`); continue; }
     for (const mes of mesesDaRota(rota, hoje)) {
       consultas++;
       let oferta;
       try {
-        oferta = await melhorDoMes(rota, mes);
+        oferta = await melhorDoMes(rota, mes, geo);
       } catch (e) {
         falhas++;
         ultimoErroTP = e.message;
@@ -300,7 +353,7 @@ async function main() {
       console.log(`${rota.nome} ${mes}: ${brl(oferta.preco)}` + (est.media ? ` (média ${brl(est.media)}, ${est.n} dias)` : ''));
       hist.ofertas[chave] = {
         preco: oferta.preco, ida: oferta.ida, volta: oferta.volta, de: oferta.aeroOrigem, para: oferta.aeroDestino,
-        cia: oferta.cia, escalas: oferta.escalas, link: oferta.link, confirmado: false, em: hoje
+        cia: oferta.cia, escalas: oferta.escalas, link: oferta.link, confirmado: false, em: hoje, cidade: oferta.cidade || ''
       };
       achados.push({ rota, mes, chave, oferta, est, preco: oferta.preco, av: avaliar(oferta.preco, est, rota, cfg) });
     }
