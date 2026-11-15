@@ -387,6 +387,12 @@
    "2026-11-12": 1317,
    "2026-11-13": 1317,
    "2026-11-15": 1330
+  },
+  "JJG-MCZ|2026-11": {
+   "2026-11-15": 5560
+  },
+  "FLN-SHA|2026-11": {
+   "2026-11-15": 12099
   }
  },
  "alertas": {
@@ -495,14 +501,59 @@
    "link": "https://www.aviasales.com/search/FLN0704MCZ15041?t=LA18071124001807138500000435FLNGRUMCZ18077718001807816500000745MCZGRUFLN_a09e1847a945bb8a6a92b047dbcb1237_19801&search_date=11112026&expected_price_uuid=01a1ca8a-dc84-8040-6a5b-104d53335ca9&static_fare_key=TY%7CP1%7CH1%7CL0%7CCH0%7CR0%7CTBC0&itinerary_key=B1snIg_g75WEk9fbVk9Y1w&expected_price_source=share&expected_price_currency=brl&expected_price=1330",
    "confirmado": false,
    "em": "2026-11-15"
+  },
+  "JJG-MCZ|2026-11": {
+   "preco": 5560,
+   "ida": "2026-11-24",
+   "volta": "2026-12-04",
+   "de": "JJG",
+   "para": "MCZ",
+   "cia": "",
+   "ciaNome": "LATAM",
+   "escalas": 1,
+   "link": null,
+   "confirmado": true,
+   "faixa": [
+    3100,
+    6000
+   ],
+   "em": "2026-11-15",
+   "fonte": "google"
+  },
+  "FLN-SHA|2026-11": {
+   "preco": 12099,
+   "ida": "2026-11-24",
+   "volta": "2026-12-04",
+   "de": "FLN",
+   "para": "PVG",
+   "cia": "",
+   "ciaNome": "Gol",
+   "escalas": 2,
+   "link": null,
+   "confirmado": true,
+   "faixa": [
+    9200,
+    11500
+   ],
+   "em": "2026-11-15",
+   "fonte": "google"
   }
  },
  "conectado": true,
  "telegram_ok": true,
  "iniciado": "2026-11-14",
  "atualizado": "2026-11-15",
- "atualizado_em": "2026-11-15T15:42:08.542Z",
- "base": {},
+ "atualizado_em": "2026-11-15T16:01:51.551Z",
+ "base": {
+  "JJG-MCZ|2026-11": {
+   "media": 4550,
+   "em": "2026-11-15"
+  },
+  "FLN-SHA|2026-11": {
+   "media": 10350,
+   "em": "2026-11-15"
+  }
+ },
  "semeado": {
   "FLN-RIO|2027-05": "2026-11-14",
   "FLN-RIO|2027-03": "2026-11-14",
@@ -510,25 +561,38 @@
   "FLN-RIO|2026-12": "2026-11-14",
   "FLN-RIO|2026-11": "2026-11-14",
   "FLN-MCZ|2027-04": "2026-11-14",
-  "FLN-MCZ|2027-01": "2026-11-14"
+  "FLN-MCZ|2027-01": "2026-11-14",
+  "JJG-MCZ|2026-11": "2026-11-15",
+  "FLN-SHA|2026-11": "2026-11-15"
  },
  "descartado": {},
  "google": {
   "mes": "2026-11",
-  "usadas": 7
+  "usadas": 9
  },
  "status": {
   "tp": {
-   "em": "2026-11-15T15:42:08.541Z",
+   "em": "2026-11-15T16:01:16.190Z",
    "ok": true,
    "consultas": 36,
    "falhas": 0,
    "precos": 5,
    "erro": ""
+  },
+  "google": {
+   "em": "2026-11-15T16:01:51.551Z",
+   "ok": true
   }
  },
- "vazio": {
-  "JJG-MCZ": "2026-11-15",
-  "FLN-SHA": "2026-11-15"
+ "vazio": {},
+ "sonda": {
+  "JJG-MCZ|2026-11": {
+   "em": "2026-11-15",
+   "n": 1
+  },
+  "FLN-SHA|2026-11": {
+   "em": "2026-11-15",
+   "n": 1
+  }
  }
 }
