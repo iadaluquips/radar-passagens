@@ -22,6 +22,7 @@ const PADRAO = {
   confirmacoes_google_por_rodada: 3, // limite p/ caber nas 250 buscas grátis/mês
   max_avisos_por_rota: 3,           // no máximo X datas por rota em cada aviso
   medias_google_por_rodada: 4,      // quantos meses por rodada ganham a média pronta do Google
+  buscas_google_sem_cache: 2,       // meses por rodada buscados direto no Google quando a base grátis não tem a rota
   limite_google_mes: 230            // teto de buscas na SerpApi por mês (plano grátis: 250)
 };
 
@@ -94,12 +95,19 @@ async function carregarGeo(hoje) {
       console.log('Não consegui baixar a lista mundial de aeroportos agora' + (geo ? '; uso a que já tenho.' : '.'));
     }
   }
-  const pais = {}, nome = {};
+  const pais = {}, nome = {}, daCidade = {}, ehAeroporto = {};
   if (geo) {
     for (const [c, n, p] of geo.cidades) { pais[c] = p; nome[c] = n; }
-    for (const [c, n, cid, p] of geo.aeroportos) { if (!pais[c]) pais[c] = p; if (!nome[c]) nome[c] = n; }
+    for (const [c, n, cid, p] of geo.aeroportos) {
+      ehAeroporto[c] = true;
+      if (cid) (daCidade[cid] = daCidade[cid] || []).push(c);
+      if (!pais[c]) pais[c] = p;
+      if (!nome[c]) nome[c] = n;
+    }
   }
-  return { ok: !!geo, pais, nome };
+  // código que o Google entende: os aeroportos da cidade (ex.: RIO -> GIG,SDU)
+  const paraGoogle = (cod) => (daCidade[cod] && daCidade[cod].length ? daCidade[cod].slice(0, 5).join(',') : cod);
+  return { ok: !!geo, pais, nome, paraGoogle };
 }
 
 // ---------- Travelpayouts ----------
@@ -178,10 +186,19 @@ async function confirmarGoogle(of) {
   if (!r.ok) throw new Error('SerpApi respondeu ' + r.status);
   const j = await r.json();
   if (j.error) throw new Error('SerpApi: ' + j.error);
-  const voos = [].concat(j.best_flights || [], j.other_flights || []).map((v) => v.price).filter((x) => x > 0);
+  const lista = [].concat(j.best_flights || [], j.other_flights || []).filter((v) => v && v.price > 0);
+  const voos = lista.map((v) => v.price);
   const pi = j.price_insights || {};
   const preco = pi.lowest_price || (voos.length ? Math.min(...voos) : null);
   if (!preco) return null;
+  const barato = lista.slice().sort((a, b) => a.price - b.price)[0];
+  const pernas = (barato && Array.isArray(barato.flights) && barato.flights) || [];
+  const melhor = pernas.length ? {
+    ciaNome: pernas[0].airline || '',
+    escalas: pernas.length - 1,
+    de: (pernas[0].departure_airport || {}).id || '',
+    para: (pernas[pernas.length - 1].arrival_airport || {}).id || ''
+  } : null;
   const historico = (Array.isArray(pi.price_history) ? pi.price_history : [])
     .filter((x) => Array.isArray(x) && x[0] > 0 && x[1] > 0)
     .map((x) => [new Date(x[0] * 1000).toISOString().slice(0, 10), x[1]]);
@@ -190,15 +207,39 @@ async function confirmarGoogle(of) {
     nivel: pi.price_level || null,
     faixa: Array.isArray(pi.typical_price_range) && pi.typical_price_range.length === 2 ? pi.typical_price_range : null,
     url: (j.search_metadata && j.search_metadata.google_flights_url) || null,
-    historico
+    historico,
+    melhor
   };
 }
 
-// controle do limite mensal da SerpApi
-function podeGoogle(hist, cfg, hoje) {
+// controle do limite mensal da SerpApi, repartido pelos dias que faltam no mês (2 rodadas por dia)
+let googleNestaRodada = 0;
+function podeGoogle(hist, cfg, hoje, reserva = 0) {
   const mes = hoje.slice(0, 7);
   if (!hist.google || hist.google.mes !== mes) hist.google = { mes, usadas: 0 };
-  return SERPAPI_KEY && hist.google.usadas < cfg.limite_google_mes;
+  if (!SERPAPI_KEY || hist.google.usadas >= cfg.limite_google_mes) return false;
+  const ultimoDia = new Date(Date.UTC(Number(hoje.slice(0, 4)), Number(hoje.slice(5, 7)), 0)).getUTCDate();
+  const diasRestantes = ultimoDia - Number(hoje.slice(8, 10)) + 1;
+  const porRodada = Math.max(2, Math.min(8, Math.floor((cfg.limite_google_mes - hist.google.usadas + googleNestaRodada) / (diasRestantes * 2))));
+  return googleNestaRodada < porRodada - reserva;
+}
+function gastouGoogle(hist) { hist.google.usadas++; googleNestaRodada++; }
+
+// data de ida para sondar um mês direto no Google: uma terça-feira, variando a cada visita
+function dataSonda(mes, visita, hoje) {
+  const base = [12, 19, 26, 5, 15, 22, 8][visita % 7];
+  const fim = new Date(Date.UTC(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 0)).getUTCDate();
+  let d = new Date(Date.UTC(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)) - 1, Math.min(base, fim)));
+  while (d.getUTCDay() !== 2) d = new Date(d.getTime() + 86400000);
+  let iso = d.toISOString().slice(0, 10);
+  if (iso.slice(0, 7) !== mes) iso = `${mes}-${String(Math.min(base, fim)).padStart(2, '0')}`;
+  if (diasEntre(hoje, iso) < 3) {            // muito em cima da hora: tenta a última terça do mês
+    d = new Date(Date.UTC(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)) - 1, fim));
+    while (d.getUTCDay() !== 2) d = new Date(d.getTime() - 86400000);
+    iso = d.toISOString().slice(0, 10);
+    if (diasEntre(hoje, iso) < 3) return null;
+  }
+  return iso;
 }
 
 const linkGoogle = (of) =>
@@ -266,7 +307,7 @@ function periodo(of) {
 }
 function voo(of) {
   const p = [];
-  if (of.cia) p.push(nomeCia(of.cia));
+  if (of.ciaNome) p.push(of.ciaNome); else if (of.cia) p.push(nomeCia(of.cia));
   p.push(of.escalas === 0 ? 'voo direto' : of.escalas === 1 ? '1 escala' : `${of.escalas} escalas`);
   return p.join(' · ');
 }
@@ -295,6 +336,7 @@ function cartao(c, opt = {}) {
 
 // ---------- principal ----------
 async function main() {
+  googleNestaRodada = 0;
   if (!TP_TOKEN) throw new Error('Falta o secret TRAVELPAYOUTS_TOKEN.');
   const arq = JSON.parse(fs.readFileSync(ARQ_ROTAS, 'utf8'));
   const cfg = Object.assign({}, PADRAO, arq.config || {});
@@ -327,6 +369,8 @@ async function main() {
 
   const geo = await carregarGeo(hoje);
   const achados = [];
+  const semCache = [];
+  hist.sonda = hist.sonda || {};
   let consultas = 0;
   let falhas = 0;
   let ultimoErroTP = '';
@@ -345,7 +389,11 @@ async function main() {
         console.log(`Erro em ${rota.nome} ${mes}: ${e.message}`);
         continue;
       }
-      if (!oferta) { console.log(`${rota.nome} ${mes}: sem preço disponível`); continue; }
+      if (!oferta) {
+        console.log(`${rota.nome} ${mes}: sem preço na base grátis`);
+        if (!rota.destino_pais) semCache.push({ rota, mes, chave: `${rota.origem}-${rota.destino}|${mes}` });
+        continue;
+      }
       const chave = `${rota.origem}-${rota.destino}|${mes}`;
       const serie = (hist.precos[chave] = hist.precos[chave] || {});
       const est = comBase(estatisticas(serie, hoje, cfg.janela_media_dias), hist.base[chave], cfg.dias_minimos_de_historico);
@@ -361,13 +409,55 @@ async function main() {
 
   // situação das fontes, para o painel mostrar
   hist.status.tp = { em: new Date().toISOString(), ok: !(consultas && falhas === consultas), consultas, falhas, precos: achados.length, erro: ultimoErroTP };
-  for (const rota of rotas) {
-    const k = `${rota.origem}-${rota.destino}`;
-    if (achados.some((c) => c.rota === rota)) delete hist.vazio[k]; else hist.vazio[k] = hoje;
-  }
   if (consultas && falhas === consultas) {
     fs.writeFileSync(ARQ_HIST, JSON.stringify(hist, null, 1));
     throw new Error('Todas as consultas falharam. Confira o token da Travelpayouts.');
+  }
+
+  // rota que a base grátis não tem: busca direto no Google, poucos meses por rodada (os menos visitados primeiro)
+  semCache.sort((a, b) => ((hist.sonda[a.chave] || {}).em || '').localeCompare((hist.sonda[b.chave] || {}).em || '') || a.mes.localeCompare(b.mes));
+  let sondas = 0;
+  for (const x of semCache) {
+    if (sondas >= cfg.buscas_google_sem_cache || !podeGoogle(hist, cfg, hoje, 1)) break;
+    const visita = (hist.sonda[x.chave] || {}).n || 0;
+    const ida = dataSonda(x.mes, visita, hoje);
+    if (!ida) continue;
+    const idaVolta = x.rota.ida_e_volta !== false;
+    const dur = Math.round(((x.rota.dias_min ?? 5) + (x.rota.dias_max ?? 15)) / 2);
+    const volta = idaVolta ? new Date(Date.parse(ida) + dur * 86400000).toISOString().slice(0, 10) : null;
+    const of = { ida, volta, aeroOrigem: geo.paraGoogle(x.rota.origem), aeroDestino: geo.paraGoogle(x.rota.destino), cia: '', escalas: 0, link: null };
+    sondas++;
+    try {
+      gastouGoogle(hist);
+      const g = await confirmarGoogle(of);
+      hist.status.google = { em: new Date().toISOString(), ok: true };
+      hist.sonda[x.chave] = { em: hoje, n: visita + 1 };
+      if (!g) { console.log(`${x.rota.nome} ${x.mes}: o Google também não achou voo em ${ida}`); continue; }
+      if (g.melhor) Object.assign(of, { ciaNome: g.melhor.ciaNome, escalas: g.melhor.escalas, aeroOrigem: g.melhor.de || of.aeroOrigem, aeroDestino: g.melhor.para || of.aeroDestino });
+      if (x.rota.max_escalas != null && of.escalas > x.rota.max_escalas) { console.log(`${x.rota.nome} ${x.mes}: só achei voo com mais escalas que o permitido`); continue; }
+      of.preco = g.preco;
+      const serie = (hist.precos[x.chave] = hist.precos[x.chave] || {});
+      let pontos = 0;
+      for (const [dia, valor] of g.historico) {
+        if (dia < hoje && diasEntre(dia, hoje) <= 180) { if (!serie[dia]) serie[dia] = Math.round(valor); pontos++; }
+      }
+      if (pontos < cfg.dias_minimos_de_historico && g.faixa) hist.base[x.chave] = { media: (g.faixa[0] + g.faixa[1]) / 2, em: hoje };
+      hist.semeado[x.chave] = hoje;
+      const est = comBase(estatisticas(serie, hoje, cfg.janela_media_dias), hist.base[x.chave], cfg.dias_minimos_de_historico);
+      serie[hoje] = Math.round(g.preco);
+      hist.ofertas[x.chave] = { preco: g.preco, ida, volta, de: of.aeroOrigem, para: of.aeroDestino, cia: '', ciaNome: of.ciaNome || '', escalas: of.escalas, link: null, confirmado: true, faixa: g.faixa, em: hoje, fonte: 'google' };
+      console.log(`${x.rota.nome} ${x.mes}: ${brl(g.preco)} direto do Google (ida ${ida})` + (est.media ? `, média ${brl(est.media)}` : ''));
+      achados.push({ rota: x.rota, mes: x.mes, chave: x.chave, oferta: of, est, preco: g.preco, google: g, av: avaliar(g.preco, est, x.rota, cfg) });
+    } catch (e) {
+      hist.status.google = { em: new Date().toISOString(), ok: false, erro: e.message };
+      console.log(`Não consegui buscar no Google (${x.rota.nome} ${x.mes}): ${e.message}`);
+    }
+  }
+  // meses sondados em rodadas anteriores continuam valendo no painel; rota só é "vazia" se nunca achou nada
+  for (const rota of rotas) {
+    const k = `${rota.origem}-${rota.destino}`;
+    const tem = achados.some((c) => c.rota === rota) || Object.keys(hist.ofertas).some((ch) => ch.startsWith(k + '|'));
+    if (tem) delete hist.vazio[k]; else hist.vazio[k] = hoje;
   }
 
   // média pronta: para meses ainda sem histórico, pega o histórico de preços do Google (uma vez por mês de viagem)
@@ -376,9 +466,9 @@ async function main() {
     .sort((a, b) => a.preco - b.preco)
     .slice(0, cfg.medias_google_por_rodada);
   for (const c of semMedia) {
-    if (!podeGoogle(hist, cfg, hoje)) break;
+    if (!podeGoogle(hist, cfg, hoje, 1)) break;
     try {
-      hist.google.usadas++;
+      gastouGoogle(hist);
       const g = await confirmarGoogle(c.oferta);
       hist.semeado[c.chave] = hoje;
       hist.status.google = { em: new Date().toISOString(), ok: true };
@@ -418,7 +508,7 @@ async function main() {
     for (const c of candidatos.filter((x) => !x.google).slice(0, cfg.confirmacoes_google_por_rodada)) {
       if (!podeGoogle(hist, cfg, hoje)) break;
       try {
-        hist.google.usadas++;
+        gastouGoogle(hist);
         const g = await confirmarGoogle(c.oferta);
         hist.status.google = { em: new Date().toISOString(), ok: true };
         if (!g) continue;
@@ -486,7 +576,7 @@ async function main() {
   // limpeza: guarda no máximo 180 dias e descarta meses que já passaram
   const mesAtual = hoje.slice(0, 7);
   for (const chave in hist.precos) {
-    if (chave.split('|')[1] < mesAtual) { for (const t of ['precos', 'alertas', 'ofertas', 'base', 'semeado', 'descartado']) delete hist[t][chave]; continue; }
+    if (chave.split('|')[1] < mesAtual) { for (const t of ['precos', 'alertas', 'ofertas', 'base', 'semeado', 'descartado', 'sonda']) delete hist[t][chave]; continue; }
     for (const dia in hist.precos[chave]) if (diasEntre(dia, hoje) > 180) delete hist.precos[chave][dia];
   }
 

@@ -69,9 +69,26 @@
   .erro { color:var(--vermelho); font-size:13px; margin-top:10px; min-height:18px; }
   .rodape { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
   .dica { font-size:13px; color:var(--cinza); margin:6px 0 0; }
+  .compacta { padding:14px 14px 14px; overflow:visible; }
+  .compacta h2 { margin:0 0 8px; font-size:17px; }
+  .compacta .campo { position:relative; display:grid; grid-template-columns:44px 1fr; align-items:center; margin-bottom:6px; }
+  .compacta .campo span { font-size:13px; font-weight:600; }
+  .compacta .campo input { padding:9px 11px; }
+  .compacta .seg { margin-bottom:6px; }
+  .compacta .seg button { padding:8px 6px; }
+  .compacta .chips { display:grid; grid-template-columns:repeat(6, 1fr); gap:4px; margin:0 0 6px; }
+  .compacta .chips button { padding:6px 0; font-size:12px; border-radius:8px; }
+  .compacta .quatro { display:grid; grid-template-columns:1fr 1fr 1fr 1.5fr; gap:6px; }
+  .compacta .quatro label { margin:2px 0 3px; font-size:12px; white-space:nowrap; }
+  .compacta .quatro input { padding:9px 8px; }
+  .compacta .erro { min-height:0; margin-top:6px; }
+  .compacta .rodape { align-items:center; margin-top:8px; }
+  .compacta .check { margin:0 auto 0 0; font-size:13px; }
+  .compacta .dica { margin:0 0 6px; font-size:12px; }
+  .compacta .sug { position:absolute; left:44px; right:0; top:100%; z-index:5; max-height:230px; overflow:auto; box-shadow:0 8px 20px rgba(20,33,61,.18); }
   .sug { display:none; border:1px solid var(--linha); border-radius:10px; background:#fff; margin-top:4px; overflow:hidden; }
   .sug.on { display:block; }
-  .sug button { display:grid; grid-template-columns:1fr auto; gap:2px 10px; width:100%; text-align:left; border:0; border-top:1px solid #f0ebde; background:none; padding:10px 12px; font-size:14px; }
+  .sug button { display:grid; grid-template-columns:1fr auto; gap:2px 10px; width:100%; text-align:left; border:0; border-top:1px solid #f0ebde; background:none; padding:7px 10px; font-size:14px; }
   .sug button:first-child { border-top:0; }
   .sug button small { grid-column:1; color:var(--cinza); font-size:12px; }
   .sug button code { grid-row:1 / span 2; grid-column:2; align-self:center; font:700 13px ui-monospace, Menlo, Consolas, monospace; color:var(--cinza); }
@@ -106,41 +123,26 @@
 
 <!-- formulário de rota -->
 <div class="fundo" id="dlgRota">
-  <div class="folha">
+  <div class="folha compacta">
     <h2 id="tituloRota">Nova rota</h2>
-    <label for="fDe">De</label>
-    <input type="text" id="fDe" placeholder="Cidade ou aeroporto. Ex.: Rio de Janeiro" autocomplete="off">
-    <div class="sug" id="sDe"></div>
-    <label for="fPara">Para</label>
-    <input type="text" id="fPara" placeholder="Cidade, aeroporto ou país. Ex.: China" autocomplete="off">
-    <div class="sug" id="sPara"></div>
-    <p class="dica" id="dicaLugar">Digite o nome e escolha na lista. A cidade pega todos os aeroportos dela; o país pega todos os aeroportos do país.</p>
+    <div class="campo"><span>De</span><input type="text" id="fDe" placeholder="Cidade ou aeroporto" autocomplete="off" aria-label="De"><div class="sug" id="sDe"></div></div>
+    <div class="campo"><span>Para</span><input type="text" id="fPara" placeholder="Cidade, aeroporto ou país" autocomplete="off" aria-label="Para"><div class="sug" id="sPara"></div></div>
+    <p class="dica" id="dicaLugar" hidden></p>
 
-    <label>Tipo de viagem</label>
     <div class="seg" id="fTipo"><button data-v="iv" class="on">Ida e volta</button><button data-v="ida">Só ida</button></div>
-
-    <label>Quando</label>
     <div class="seg" id="fQuando"><button data-v="prox" class="on">Próximos 12 meses</button><button data-v="meses">Escolher meses</button></div>
     <div class="chips" id="fMeses" hidden></div>
 
-    <div id="blocoDias">
-      <label>Duração da viagem <small>(dias)</small></label>
-      <div class="dupla">
-        <input type="number" id="fMin" inputmode="numeric" min="1" max="90" placeholder="mínimo">
-        <input type="number" id="fMax" inputmode="numeric" min="1" max="90" placeholder="máximo">
-      </div>
+    <div class="quatro">
+      <div id="blocoMin"><label for="fMin">Dias mín.</label><input type="number" id="fMin" inputmode="numeric" min="1" max="90"></div>
+      <div id="blocoMax"><label for="fMax">Dias máx.</label><input type="number" id="fMax" inputmode="numeric" min="1" max="90"></div>
+      <div><label for="fPax">Pessoas</label><input type="number" id="fPax" inputmode="numeric" min="1" max="9"></div>
+      <div><label for="fAlvo">Alvo R$ <small>/pessoa</small></label><input type="number" id="fAlvo" inputmode="numeric" min="0" placeholder="opcional"></div>
     </div>
-
-    <label for="fPax">Quantas pessoas vão viajar</label>
-    <input type="number" id="fPax" inputmode="numeric" min="1" max="9" placeholder="1">
-
-    <label for="fAlvo">Preço-alvo por pessoa em R$ <small>(opcional — avisa sempre que ficar abaixo)</small></label>
-    <input type="number" id="fAlvo" inputmode="numeric" min="0" placeholder="Ex.: 3500">
-
-    <label class="check"><input type="checkbox" id="fDireto"> Só voos diretos</label>
 
     <div class="erro" id="erroRota"></div>
     <div class="rodape">
+      <label class="check"><input type="checkbox" id="fDireto"> Só direto</label>
       <button class="btn" id="btnCancelarRota">Cancelar</button>
       <button class="btn p" id="btnSalvarRota">Salvar rota</button>
     </div>
@@ -296,6 +298,7 @@
       var b = e.target.closest('button'); if (!b) return;
       escolher(campo, b.dataset.c, b.dataset.t); fechar(); $('erroRota').textContent = '';
     });
+    campo.addEventListener('blur', function () { setTimeout(fechar, 250); });
     campo.fechar = fechar;
   }
   function escolher(campo, cod, tipo) {
@@ -447,12 +450,12 @@
       var melhor = ms.slice().sort(function (a, b) { return a.preco - b.preco; })[0];
       var topo = melhor
         ? '<div class="preco"><b>' + brl(melhor.preco) + '</b><small>' + (r.passageiros > 1 ? 'por pessoa · ' : 'melhor: ') + nomeMes(melhor.mes) + '</small></div>'
-        : '<div class="preco"><small>' + ((hist.vazio || {})[r.origem + '-' + r.destino] ? 'nenhum preço<br>encontrado' : 'aguardando<br>a 1ª busca') + '</small></div>';
+        : '<div class="preco"><small>' + ((hist.vazio || {})[r.origem + '-' + r.destino] ? 'buscando<br>no Google…' : 'aguardando<br>a 1ª busca') + '</small></div>';
       var linhas = ms.map(function (m) {
         var d = '';
         if (m.oferta && m.oferta.ida) {
           d = (m.oferta.cidade ? '<b>' + esc(PT[m.oferta.cidadeCod] || m.oferta.cidade) + ' (' + esc(m.oferta.para) + ')</b> · ' : '') + dataBR(m.oferta.ida) + (m.oferta.volta ? ' a ' + dataBR(m.oferta.volta) + ' (' + dias(m.oferta.ida, m.oferta.volta) + ' dias)' : '') +
-            (m.oferta.cia ? ' · ' + esc(CIAS[m.oferta.cia] || 'cia ' + m.oferta.cia) : '') +
+            (m.oferta.ciaNome ? ' · ' + esc(m.oferta.ciaNome) : m.oferta.cia ? ' · ' + esc(CIAS[m.oferta.cia] || 'cia ' + m.oferta.cia) : '') +
             (m.oferta.escalas === 0 ? ' · direto' : m.oferta.escalas === 1 ? ' · 1 escala' : m.oferta.escalas > 1 ? ' · ' + m.oferta.escalas + ' escalas' : '') +
             (m.oferta.confirmado ? ' · confirmado no Google' : '') +
             ' · <a href="' + esc(linkGoogle(m.oferta)) + '" target="_blank" rel="noopener">ver voos</a>';
@@ -474,7 +477,7 @@
         (melhor ? grafico(melhor) : '') +
         '<div class="legenda">' + esc(regras.join(' · ')) + '</div>' +
         (linhas || '<div class="legenda">' + ((hist.vazio || {})[r.origem + '-' + r.destino]
-          ? 'O robô procurou e não achou preço para esta rota. Confira se os códigos ' + esc(r.origem) + ' e ' + esc(r.destino) + ' estão certos. Em aeroportos pequenos a base gratuita pode não ter dados; tente o aeroporto maior mais próximo.'
+          ? 'A base gratuita não tem esta rota. O robô vai buscar direto no Google Flights, 2 meses por busca, então os preços aparecem aos poucos. Para ir mais rápido, edite a rota e escolha só os meses que interessam.'
           : 'Os preços aparecem aqui depois da próxima busca do robô (07:17 e 18:17), ou toque em Ajustes → Rodar agora.') + '</div>') +
         '<div class="acoes"><button class="btn" data-acao="editar" data-i="' + i + '">Editar</button><button class="btn perigo" data-acao="remover" data-i="' + i + '">Remover</button></div>' +
         '</div></section>';
@@ -487,7 +490,7 @@
   function desenharMeses() {
     $('fMeses').hidden = quando !== 'meses';
     $('fMeses').innerHTML = proximosMeses(11).map(function (m) { return '<button type="button" data-m="' + m + '" class="' + (mesesSel[m] ? 'on' : '') + '">' + nomeMes(m) + '</button>'; }).join('');
-    $('blocoDias').style.display = tipo === 'iv' ? '' : 'none';
+    $('blocoMin').style.visibility = $('blocoMax').style.visibility = tipo === 'iv' ? '' : 'hidden';
   }
   function abrirRota(i) {
     if (!token) { abrirAjustes(); toast('Cole o código de acesso para adicionar rotas'); return; }
@@ -497,9 +500,8 @@
     ['fDe', 'fPara'].forEach(function (id) { $(id).value = ''; delete $(id).dataset.codigo; delete $(id).dataset.tipo; if ($(id).fechar) $(id).fechar(); });
     if (r.origem) escolher($('fDe'), r.origem, (porCodigo[r.origem] || {}).tipo === 'aeroporto' ? 'aeroporto' : 'cidade');
     if (r.destino) escolher($('fPara'), r.destino, r.destino_pais ? 'pais' : (porCodigo[r.destino] || {}).tipo === 'aeroporto' ? 'aeroporto' : 'cidade');
-    $('dicaLugar').textContent = geoCarregado
-      ? 'Digite o nome e escolha na lista. A cidade pega todos os aeroportos dela; o país pega todos os aeroportos do país.'
-      : 'A lista mundial ainda não foi baixada pelo robô (acontece na próxima busca). Por enquanto, digite o nome de uma cidade conhecida ou o código de 3 letras.';
+    $('dicaLugar').hidden = geoCarregado;
+    $('dicaLugar').textContent = 'Lista mundial ainda não baixada: por enquanto use cidades conhecidas ou o código de 3 letras.';
     tipo = r.ida_e_volta === false ? 'ida' : 'iv';
     quando = Array.isArray(r.meses) && r.meses.length ? 'meses' : 'prox';
     mesesSel = {}; (r.meses || []).forEach(function (m) { mesesSel[m] = true; });
