@@ -46,6 +46,15 @@
       "proximos_meses": 11,
       "dias_min": 5,
       "dias_max": 15
+    },
+    {
+      "nome": "Florianópolis → Santiago",
+      "origem": "FLN",
+      "destino": "SCL",
+      "ida_e_volta": true,
+      "proximos_meses": 11,
+      "dias_min": 5,
+      "dias_max": 15
     }
   ]
 }
