@@ -265,7 +265,8 @@
    "2026-11-13": 519,
    "2026-11-15": 548,
    "2026-11-16": 548,
-   "2026-11-17": 548
+   "2026-11-17": 548,
+   "2026-11-18": 571
   },
   "FLN-RIO|2027-05": {
    "2026-11-14": 519,
@@ -478,7 +479,7 @@
    "2026-11-14": 1719,
    "2026-11-16": 1614,
    "2026-11-17": 1614,
-   "2026-11-18": 1614
+   "2026-11-18": 1850
   },
   "FLN-SCL|2027-01": {
    "2026-11-15": 1719,
@@ -1186,17 +1187,19 @@
    "fonte": "google"
   },
   "FLN-RIO|2027-03": {
-   "preco": 548,
-   "ida": "2027-03-01",
-   "volta": "2027-03-09",
+   "preco": 571,
+   "ida": "2027-03-16",
+   "volta": "2027-03-26",
    "de": "FLN",
    "para": "GIG",
-   "cia": "G3",
+   "cia": "",
+   "ciaNome": "LATAM",
    "escalas": 1,
-   "link": "https://www.aviasales.com/search/FLN0103RIO09031?t=G318038883001803921600000555FLNCGHGIG18045708001804587900000285GIGGRUFLN_e86d44ea7a7e87a79582b05849ec1996_8189&search_date=11112026&expected_price_uuid=01a1c81e-11e7-8040-2d1e-4dac4fb33242&static_fare_key=TY%7CP1%7CH1%7CL0%7CCH0%7CR0%7CTBC0&itinerary_key=8ZOPyn8GaeVLqjADxfOGuw&expected_price_source=share&expected_price_currency=brl&expected_price=548",
-   "confirmado": false,
-   "em": "2026-11-17",
-   "cidade": ""
+   "link": null,
+   "confirmado": true,
+   "faixa": null,
+   "em": "2026-11-18",
+   "fonte": "google"
   },
   "FLN-RIO|2027-05": {
    "preco": 542,
@@ -1274,17 +1277,22 @@
    "fonte": "google"
   },
   "FLN-SCL|2026-12": {
-   "preco": 1614,
-   "ida": "2026-12-01",
-   "volta": "2026-12-08",
+   "preco": 1850,
+   "ida": "2026-12-15",
+   "volta": "2026-12-25",
    "de": "FLN",
    "para": "SCL",
-   "cia": "JA",
+   "cia": "",
+   "ciaNome": "JetSMART",
    "escalas": 0,
-   "link": "https://www.aviasales.com/search/FLN0112SCL08121?t=JA17961540001796168400000240FLNSCL17967099001796721900000200SCLFLN_dc4699d07d18f8783b115504b3beb5fb_24027&search_date=11112026&expected_price_uuid=01a1ca6c-e861-8040-257d-0f5161d0214d&static_fare_key=TY%7CP1%7CH0%7CL0%7CCH0%7CR0%7CTBC0&itinerary_key=GwgY4fZma0PvXpaYIJsJ_Q&expected_price_source=share&expected_price_currency=brl&expected_price=1614",
-   "confirmado": false,
+   "link": null,
+   "confirmado": true,
+   "faixa": [
+    1200,
+    1850
+   ],
    "em": "2026-11-18",
-   "cidade": ""
+   "fonte": "google"
   },
   "FLN-SCL|2027-01": {
    "preco": 1720,
@@ -1566,7 +1574,7 @@
  "telegram_ok": true,
  "iniciado": "2026-11-14",
  "atualizado": "2026-11-18",
- "atualizado_em": "2026-11-18T11:13:52.053Z",
+ "atualizado_em": "2026-11-18T21:58:48.817Z",
  "base": {
   "JJG-MCZ|2026-11": {
    "media": 4550,
@@ -1599,7 +1607,7 @@
  },
  "semeado": {
   "FLN-RIO|2027-05": "2026-11-14",
-  "FLN-RIO|2027-03": "2026-11-14",
+  "FLN-RIO|2027-03": "2026-11-18",
   "FLN-RIO|2027-02": "2026-11-18",
   "FLN-RIO|2026-12": "2026-11-14",
   "FLN-RIO|2026-11": "2026-11-14",
@@ -1609,7 +1617,7 @@
   "FLN-SHA|2026-11": "2026-11-15",
   "FLN-MCZ|2026-11": "2026-11-15",
   "FLN-SCL|2026-11": "2026-11-15",
-  "FLN-SCL|2026-12": "2026-11-15",
+  "FLN-SCL|2026-12": "2026-11-18",
   "FLN-SCL|2027-02": "2026-11-15",
   "FLN-SCL|2027-04": "2026-11-15",
   "FLN-SHA|2026-12": "2026-11-15",
@@ -1629,21 +1637,20 @@
  "descartado": {},
  "google": {
   "mes": "2026-11",
-  "usadas": 29
+  "usadas": 31
  },
  "status": {
   "tp": {
-   "em": "2026-11-18T11:13:25.621Z",
+   "em": "2026-11-18T21:58:29.910Z",
    "ok": true,
    "consultas": 48,
    "falhas": 0,
-   "precos": 11,
+   "precos": 9,
    "erro": ""
   },
   "google": {
-   "em": "2026-11-18T11:13:52.052Z",
-   "ok": false,
-   "erro": "SerpApi: Google Flights hasn't returned any results for this query."
+   "em": "2026-11-18T21:58:48.816Z",
+   "ok": true
   }
  },
  "vazio": {},
@@ -1705,6 +1712,14 @@
    "n": 1
   },
   "FLN-RIO|2027-02": {
+   "em": "2026-11-18",
+   "n": 1
+  },
+  "FLN-SCL|2026-12": {
+   "em": "2026-11-18",
+   "n": 1
+  },
+  "FLN-RIO|2027-03": {
    "em": "2026-11-18",
    "n": 1
   }
