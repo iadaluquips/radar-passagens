@@ -279,7 +279,8 @@
    "2026-11-15": 548,
    "2026-11-16": 548,
    "2026-11-17": 548,
-   "2026-11-18": 571
+   "2026-11-18": 571,
+   "2026-11-25": 545
   },
   "FLN-RIO|2027-05": {
    "2026-11-14": 519,
@@ -1746,9 +1747,9 @@
    "data": "2026-11-21"
   },
   "FLN-RIO|2027-03": {
-   "preco": 519,
-   "cache": 548,
-   "data": "2026-11-14"
+   "preco": 535,
+   "cache": 545,
+   "data": "2026-11-25"
   },
   "FLN-RIO|2027-02": {
    "preco": 519,
@@ -1804,19 +1805,21 @@
    "fonte": "google"
   },
   "FLN-RIO|2027-03": {
-   "preco": 571,
-   "ida": "2027-03-16",
-   "volta": "2027-03-26",
+   "preco": 535,
+   "ida": "2027-03-05",
+   "volta": "2027-03-11",
    "de": "FLN",
    "para": "GIG",
-   "cia": "",
-   "ciaNome": "LATAM",
-   "escalas": 1,
-   "link": null,
+   "cia": "G3",
+   "escalas": 0,
+   "link": "https://www.aviasales.com/search/FLN0503RIO11031?t=G318042729001804278000000085FLNGIG18047880001804793700000095GIGFLN_30874f2a7818490412ba2b36ff459e7e_7750&search_date=25112026&expected_price_uuid=01a21374-7869-8040-67d2-d75244dc4eb1&static_fare_key=TY%7CP1%7CH1%7CL0%7CCH0%7CR0%7CTBC0&itinerary_key=Y2z3Xh6zoA_s6J4hXX1xww&expected_price_source=share&expected_price_currency=brl&expected_price=545",
    "confirmado": true,
-   "faixa": null,
-   "em": "2026-11-18",
-   "fonte": "google"
+   "em": "2026-11-25",
+   "cidade": "",
+   "faixa": [
+    580,
+    2250
+   ]
   },
   "FLN-RIO|2027-05": {
    "preco": 558,
@@ -2517,7 +2520,7 @@
  "telegram_ok": true,
  "iniciado": "2026-11-14",
  "atualizado": "2026-11-25",
- "atualizado_em": "2026-11-25T11:07:23.953Z",
+ "atualizado_em": "2026-11-25T22:04:36.040Z",
  "base": {
   "JJG-MCZ|2026-11": {
    "media": 4550,
@@ -2618,21 +2621,20 @@
  "descartado": {},
  "google": {
   "mes": "2026-11",
-  "usadas": 58
+  "usadas": 61
  },
  "status": {
   "tp": {
-   "em": "2026-11-25T11:07:05.154Z",
+   "em": "2026-11-25T22:04:05.656Z",
    "ok": true,
    "consultas": 48,
    "falhas": 0,
-   "precos": 5,
+   "precos": 6,
    "erro": ""
   },
   "google": {
-   "em": "2026-11-25T11:07:23.951Z",
-   "ok": false,
-   "erro": "SerpApi: Google Flights hasn't returned any results for this query."
+   "em": "2026-11-25T22:04:36.038Z",
+   "ok": true
   }
  },
  "vazio": {},
