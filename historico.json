@@ -146,7 +146,8 @@
    "2026-11-23": 1045,
    "2026-11-24": 1045,
    "2026-11-25": 1112,
-   "2026-11-26": 1112
+   "2026-11-26": 1112,
+   "2026-11-27": 1112
   },
   "FLN-RIO|2027-02": {
    "2026-11-14": 519,
@@ -213,7 +214,8 @@
    "2026-11-15": 622,
    "2026-11-16": 622,
    "2026-11-17": 622,
-   "2026-11-18": 568
+   "2026-11-18": 568,
+   "2026-11-27": 774
   },
   "FLN-RIO|2027-03": {
    "2026-11-14": 519,
@@ -282,7 +284,8 @@
    "2026-11-17": 548,
    "2026-11-18": 571,
    "2026-11-25": 545,
-   "2026-11-26": 545
+   "2026-11-26": 545,
+   "2026-11-27": 545
   },
   "FLN-RIO|2027-05": {
    "2026-11-14": 519,
@@ -420,7 +423,8 @@
    "2026-11-23": 1493,
    "2026-11-24": 1493,
    "2026-11-25": 1493,
-   "2026-11-26": 1493
+   "2026-11-26": 1493,
+   "2026-11-27": 1493
   },
   "FLN-MCZ|2027-04": {
    "2026-11-14": 1317,
@@ -634,7 +638,8 @@
    "2026-11-23": 1720,
    "2026-11-24": 1720,
    "2026-11-25": 1948,
-   "2026-11-26": 1948
+   "2026-11-26": 1948,
+   "2026-11-27": 1948
   },
   "FLN-SCL|2027-02": {
    "2026-11-15": 1487,
@@ -1038,7 +1043,8 @@
    "2026-11-23": 1607,
    "2026-11-24": 1607,
    "2026-11-25": 1607,
-   "2026-11-26": 1607
+   "2026-11-26": 1607,
+   "2026-11-27": 1607
   },
   "FLN-RIO|2027-01": {
    "2026-11-16": 787,
@@ -1046,7 +1052,8 @@
    "2026-11-23": 2189,
    "2026-11-24": 569,
    "2026-11-25": 568,
-   "2026-11-26": 568
+   "2026-11-26": 568,
+   "2026-11-27": 568
   },
   "FLN-SHA|2027-01": {
    "2026-11-16": 12324
@@ -1750,6 +1757,21 @@
   },
   "FLN-SHA|2027-10": {
    "2026-11-26": 14121
+  },
+  "FLN-MCZ|2027-10": {
+   "2026-11-27": 1505
+  },
+  "FLN-SCL|2027-10": {
+   "2026-11-18": 2151,
+   "2026-11-19": 2151,
+   "2026-11-20": 2160,
+   "2026-11-21": 2187,
+   "2026-11-22": 2187,
+   "2026-11-23": 2187,
+   "2026-11-24": 2187,
+   "2026-11-25": 2176,
+   "2026-11-26": 2176,
+   "2026-11-27": 2136
   }
  },
  "alertas": {
@@ -1777,6 +1799,11 @@
    "preco": 595,
    "cache": 568,
    "data": "2026-11-26"
+  },
+  "FLN-MCZ|2027-10": {
+   "preco": 1505,
+   "cache": 1505,
+   "data": "2026-11-27"
   }
  },
  "ofertas": {
@@ -1803,23 +1830,21 @@
    "escalas": 0,
    "link": "https://www.aviasales.com/search/FLN2412RIO30121?t=G317981421001798147500000090FLNGIG17986659001798700700000580GIGPOAFLN_30a362aaded503c5f74e32aef51ddb81_15262&search_date=23112026&expected_price_uuid=01a20622-cc87-8040-2e55-2a5dd79e7a00&static_fare_key=TY%7CP1%7CH1%7CL0%7CCH0%7CR0%7CTBC0&itinerary_key=3rAJGh_20_dHP9KMzAmbpg&expected_price_source=share&expected_price_currency=brl&expected_price=1112",
    "confirmado": false,
-   "em": "2026-11-26",
+   "em": "2026-11-27",
    "cidade": ""
   },
   "FLN-RIO|2027-02": {
-   "preco": 568,
-   "ida": "2027-02-16",
-   "volta": "2027-02-26",
+   "preco": 774,
+   "ida": "2027-02-03",
+   "volta": "2027-02-09",
    "de": "FLN",
    "para": "GIG",
-   "cia": "",
-   "ciaNome": "Gol",
+   "cia": "G3",
    "escalas": 0,
-   "link": null,
-   "confirmado": true,
-   "faixa": null,
-   "em": "2026-11-18",
-   "fonte": "google"
+   "link": "https://www.aviasales.com/search/FLN0302RIO09021?t=G318016857001801691100000090FLNGIG18021516001802168700000285GIGGRUFLN_4526c4243ebfe2998530fcbe956daf25_11242&search_date=26112026&expected_price_uuid=01a219fc-abc0-8040-2b0d-f1a3695d33f5&static_fare_key=TY%7CP0%7CH1%7CL0%7CCH0%7CR0%7CTBC0&itinerary_key=QajAQLjQEziQyQVWljzgfg&expected_price_source=share&expected_price_currency=brl&expected_price=774",
+   "confirmado": false,
+   "em": "2026-11-27",
+   "cidade": ""
   },
   "FLN-RIO|2027-03": {
    "preco": 545,
@@ -1831,7 +1856,7 @@
    "escalas": 0,
    "link": "https://www.aviasales.com/search/FLN0503RIO11031?t=G318042729001804278000000085FLNGIG18047880001804793700000095GIGFLN_30874f2a7818490412ba2b36ff459e7e_7750&search_date=25112026&expected_price_uuid=01a21374-7869-8040-67d2-d75244dc4eb1&static_fare_key=TY%7CP1%7CH1%7CL0%7CCH0%7CR0%7CTBC0&itinerary_key=Y2z3Xh6zoA_s6J4hXX1xww&expected_price_source=share&expected_price_currency=brl&expected_price=545",
    "confirmado": false,
-   "em": "2026-11-26",
+   "em": "2026-11-27",
    "cidade": ""
   },
   "FLN-RIO|2027-05": {
@@ -1859,7 +1884,7 @@
    "escalas": 1,
    "link": "https://www.aviasales.com/search/FLN3101MCZ07021?t=G318014106001801428300000295FLNCGHMCZ18020403001802082900000710MCZGYNCNFFLN_4b74756e633bba9a1049a3688aee5c61_20601&search_date=22112026&expected_price_uuid=01a2016a-18a2-8040-698e-814a2b601215&static_fare_key=TY%7CP1%7CH1%7CL0%7CCH0%7CR0%7CTBC0&itinerary_key=Lk7wiguqC6gJfjP19s5Jpg&expected_price_source=share&expected_price_currency=brl&expected_price=1493",
    "confirmado": false,
-   "em": "2026-11-26",
+   "em": "2026-11-27",
    "cidade": ""
   },
   "FLN-MCZ|2027-04": {
@@ -1944,7 +1969,7 @@
    "escalas": 0,
    "link": "https://www.aviasales.com/search/FLN0201SCL10011?t=JA17988789001798892400000225FLNSCL17995631401799575200000201SCLFLN_617d7e541024e7f3f4dbbece8e912c51_27074&search_date=24112026&expected_price_uuid=01a20fd9-d3b0-8030-2070-fb8d6302881b&static_fare_key=TY%7CP0%7CH0%7CL0%7CCH0%7CR0%7CTBC0&itinerary_key=MQvyx60W8cSAwl3opP8fXQ&expected_price_source=share&expected_price_currency=brl&expected_price=1948",
    "confirmado": false,
-   "em": "2026-11-26",
+   "em": "2026-11-27",
    "cidade": ""
   },
   "FLN-SCL|2027-02": {
@@ -2065,7 +2090,7 @@
    "escalas": 1,
    "link": "https://www.aviasales.com/search/FLN1512MCZ24121?t=G317973333001797353400000335FLNGIGMCZ17980803001798108500000470MCZCNFFLN_80a074e689e0a1fc937fa8298d0f0fd5_22167&search_date=20112026&expected_price_uuid=01a1fa14-bd31-8040-269e-0373f7d7d09f&static_fare_key=TY%7CP1%7CH0%7CL0%7CCH0%7CR0%7CTBC0&itinerary_key=qstn3NaI-Wq_Fhnjmn2kxw&expected_price_source=share&expected_price_currency=brl&expected_price=1607",
    "confirmado": false,
-   "em": "2026-11-26",
+   "em": "2026-11-27",
    "cidade": ""
   },
   "FLN-RIO|2027-01": {
@@ -2078,7 +2103,7 @@
    "escalas": 1,
    "link": "https://www.aviasales.com/search/FLN2801RIO03021?t=G318011301001801150800000345FLNCGHGIG18016344001801653900000325GIGCGHFLN_43419bea6859d36c4a76958357a845fa_7905&search_date=24112026&expected_price_uuid=01a20dfd-219e-8040-67e8-539af8cf41d3&static_fare_key=TY%7CP1%7CH1%7CL0%7CCH0%7CR0%7CTBC0&itinerary_key=frJosWWVy7dUq3gLC0bsHw&expected_price_source=share&expected_price_currency=brl&expected_price=568",
    "confirmado": false,
-   "em": "2026-11-26",
+   "em": "2026-11-27",
    "cidade": ""
   },
   "FLN-SHA|2027-01": {
@@ -2560,13 +2585,49 @@
    ],
    "em": "2026-11-26",
    "fonte": "google"
+  },
+  "FLN-MCZ|2027-10": {
+   "preco": 1505,
+   "ida": "2027-10-12",
+   "volta": "2027-10-22",
+   "de": "FLN",
+   "para": "MCZ",
+   "cia": "",
+   "ciaNome": "Gol",
+   "escalas": 1,
+   "link": null,
+   "confirmado": true,
+   "faixa": [
+    1650,
+    2450
+   ],
+   "em": "2026-11-27",
+   "fonte": "google"
+  },
+  "FLN-SCL|2027-10": {
+   "preco": 2136,
+   "ida": "2027-10-12",
+   "volta": "2027-10-22",
+   "de": "FLN",
+   "para": "SCL",
+   "cia": "",
+   "ciaNome": "LATAM",
+   "escalas": 0,
+   "link": null,
+   "confirmado": true,
+   "faixa": [
+    1250,
+    2000
+   ],
+   "em": "2026-11-27",
+   "fonte": "google"
   }
  },
  "conectado": true,
  "telegram_ok": true,
  "iniciado": "2026-11-14",
- "atualizado": "2026-11-26",
- "atualizado_em": "2026-11-26T22:01:48.159Z",
+ "atualizado": "2026-11-27",
+ "atualizado_em": "2026-11-27T11:02:45.031Z",
  "base": {
   "JJG-MCZ|2026-11": {
    "media": 4550,
@@ -2619,6 +2680,10 @@
   "FLN-SHA|2027-10": {
    "media": 11000,
    "em": "2026-11-26"
+  },
+  "FLN-MCZ|2027-10": {
+   "media": 2050,
+   "em": "2026-11-27"
   }
  },
  "semeado": {
@@ -2668,24 +2733,26 @@
   "FLN-SHA|2027-09": "2026-11-24",
   "FLN-MCZ|2027-09": "2026-11-24",
   "FLN-RIO|2027-10": "2026-11-26",
-  "FLN-SHA|2027-10": "2026-11-26"
+  "FLN-SHA|2027-10": "2026-11-26",
+  "FLN-MCZ|2027-10": "2026-11-27",
+  "FLN-SCL|2027-10": "2026-11-27"
  },
  "descartado": {},
  "google": {
   "mes": "2026-11",
-  "usadas": 66
+  "usadas": 68
  },
  "status": {
   "tp": {
-   "em": "2026-11-26T22:01:35.806Z",
+   "em": "2026-11-27T11:02:23.499Z",
    "ok": true,
    "consultas": 48,
    "falhas": 0,
-   "precos": 6,
+   "precos": 7,
    "erro": ""
   },
   "google": {
-   "em": "2026-11-26T22:01:48.157Z",
+   "em": "2026-11-27T11:02:45.029Z",
    "ok": true
   }
  },
@@ -2865,6 +2932,14 @@
   },
   "FLN-SHA|2027-10": {
    "em": "2026-11-26",
+   "n": 1
+  },
+  "FLN-MCZ|2027-10": {
+   "em": "2026-11-27",
+   "n": 1
+  },
+  "FLN-SCL|2027-10": {
+   "em": "2026-11-27",
    "n": 1
   }
  },
